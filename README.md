@@ -1,4 +1,4 @@
-🏀 NBA Stats Website
+# 🏀 NBA Stats Website
 
 **NBA Stats Website** is a PHP-based web application that provides analytical insights into NBA player and team performance across multiple seasons. It also evaluates the alignment between major awards (like MVP, ROTY, DPOY, and All-Star selections) and player statistics.
 
