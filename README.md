@@ -29,24 +29,12 @@
 |---------------|--------------------|
 | Backend       | PHP                |
 | Frontend      | HTML, CSS, JavaScript |
-| Database (optional) | MySQL          |
-| Visualization | Chart.js / D3.js   |
+| Database (optional) | MySQL, MongoDB          |
 
 ---
 
 ## 📁 Dataset
 
-The data is sourced from publicly available NBA datasets, such as:
-
-- [Basketball Reference](https://www.basketball-reference.com/)
-- [Kaggle NBA Datasets](https://www.kaggle.com/search?q=NBA+stats)
-
 ---
 
 ## 🚀 Getting Started
-
-### 1. Clone this repo
-
-```bash
-git clone https://github.com/your-username/nba-stats-website.git
-cd nba-stats-website
