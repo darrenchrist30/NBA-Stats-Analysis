@@ -19,7 +19,7 @@
   Easy-to-understand charts and graphs for better interpretation of the data.
 
 - 🌐 **Web-Based Interface**  
-  Fully responsive UI built using PHP, HTML, CSS, and JavaScript.
+  Fully responsive UI built using PHP, HTML, CSS, Tailwind CSS, and JavaScript.
 
 ---
 
@@ -29,7 +29,7 @@
 |---------------|--------------------|
 | Backend       | PHP                |
 | Frontend      | HTML, CSS, JavaScript |
-| Database (optional) | MySQL, MongoDB          |
+| Database | MySQL, MongoDB          |
 
 ---
 
