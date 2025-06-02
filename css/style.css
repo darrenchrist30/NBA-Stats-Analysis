@@ -1,0 +1,26 @@
+/* css/style.css */
+
+/* Contoh: Gaya tambahan untuk tabel */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+/* Gaya untuk loading indicator (jika diperlukan) */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* ... Tambahkan gaya lain sesuai kebutuhan ... */

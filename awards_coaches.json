@@ -1,0 +1,490 @@
+[
+    {
+        "id": 1,
+        "year": 1962,
+        "coachID": "gallaha01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 2,
+        "year": 1963,
+        "coachID": "hannual01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 3,
+        "year": 1964,
+        "coachID": "auerbre01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 4,
+        "year": 1965,
+        "coachID": "schaydo01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 5,
+        "year": 1966,
+        "coachID": "kerrjo01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 6,
+        "year": 1967,
+        "coachID": "cazzevi01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": null
+    },
+    {
+        "id": 7,
+        "year": 1967,
+        "coachID": "gueriri01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 8,
+        "year": 1968,
+        "coachID": "hannual01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": null
+    },
+    {
+        "id": 9,
+        "year": 1968,
+        "coachID": "shuege01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 10,
+        "year": 1969,
+        "coachID": "sharmbi01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": "tie"
+    },
+    {
+        "id": 11,
+        "year": 1969,
+        "coachID": "belmojo01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": "tie"
+    },
+    {
+        "id": 12,
+        "year": 1969,
+        "coachID": "holzmre01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 13,
+        "year": 1970,
+        "coachID": "biancal01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": null
+    },
+    {
+        "id": 14,
+        "year": 1970,
+        "coachID": "mottadi01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 15,
+        "year": 1971,
+        "coachID": "nissato01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": null
+    },
+    {
+        "id": 16,
+        "year": 1971,
+        "coachID": "sharmbi01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 17,
+        "year": 1972,
+        "coachID": "brownla01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": null
+    },
+    {
+        "id": 18,
+        "year": 1972,
+        "coachID": "heinsto01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 19,
+        "year": 1973,
+        "coachID": "mccarba01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": "tie"
+    },
+    {
+        "id": 20,
+        "year": 1973,
+        "coachID": "mullajo01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": "tie"
+    },
+    {
+        "id": 21,
+        "year": 1973,
+        "coachID": "scottra01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 22,
+        "year": 1974,
+        "coachID": "brownla01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": null
+    },
+    {
+        "id": 23,
+        "year": 1974,
+        "coachID": "johnsph01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 24,
+        "year": 1975,
+        "coachID": "brownla01",
+        "award": "ABA Coach of the Year",
+        "lgID": "ABA",
+        "note": null
+    },
+    {
+        "id": 25,
+        "year": 1975,
+        "coachID": "fitchbi01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 26,
+        "year": 1976,
+        "coachID": "nissato01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 27,
+        "year": 1977,
+        "coachID": "brownhu01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 28,
+        "year": 1978,
+        "coachID": "fitzsco01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 29,
+        "year": 1979,
+        "coachID": "fitchbi01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 30,
+        "year": 1980,
+        "coachID": "mckinja01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 31,
+        "year": 1981,
+        "coachID": "shuege01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 32,
+        "year": 1982,
+        "coachID": "nelsodo01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 33,
+        "year": 1983,
+        "coachID": "laydefr01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 34,
+        "year": 1984,
+        "coachID": "nelsodo01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 35,
+        "year": 1985,
+        "coachID": "fratemi01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 36,
+        "year": 1986,
+        "coachID": "schulmi01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 37,
+        "year": 1987,
+        "coachID": "moedo01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 38,
+        "year": 1988,
+        "coachID": "fitzsco01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 39,
+        "year": 1989,
+        "coachID": "rileypa01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 40,
+        "year": 1990,
+        "coachID": "chanedo01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 41,
+        "year": 1991,
+        "coachID": "nelsodo01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 42,
+        "year": 1992,
+        "coachID": "rileypa01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 43,
+        "year": 1993,
+        "coachID": "wilkele01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 44,
+        "year": 1994,
+        "coachID": "harride01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 45,
+        "year": 1995,
+        "coachID": "jacksph01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 46,
+        "year": 1996,
+        "coachID": "rileypa01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 47,
+        "year": 1997,
+        "coachID": "birdla01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 48,
+        "year": 1998,
+        "coachID": "dunlemi01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 49,
+        "year": 1999,
+        "coachID": "riverdo01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 50,
+        "year": 2000,
+        "coachID": "brownla01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 51,
+        "year": 2001,
+        "coachID": "carliri01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 52,
+        "year": 2002,
+        "coachID": "popovgr01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 53,
+        "year": 2003,
+        "coachID": "brownhu01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 54,
+        "year": 2004,
+        "coachID": "dantomi01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 55,
+        "year": 2005,
+        "coachID": "johnsav01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 56,
+        "year": 2006,
+        "coachID": "mitchsa01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 57,
+        "year": 2007,
+        "coachID": "scottby01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 58,
+        "year": 2008,
+        "coachID": "brownmi02",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 59,
+        "year": 2009,
+        "coachID": "brooksc01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 60,
+        "year": 2010,
+        "coachID": "thiboto01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    },
+    {
+        "id": 61,
+        "year": 2011,
+        "coachID": "popovgr01",
+        "award": "NBA Coach of the Year",
+        "lgID": "NBA",
+        "note": null
+    }
+]
