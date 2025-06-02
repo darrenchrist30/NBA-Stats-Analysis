@@ -157,6 +157,7 @@ function getPlayerName($playerID, $players) {
 <body class="bg-gradient-to-br from-blue-50 to-cyan-50 ">
     <h1 class="text-4xl mt-5 font-extrabold text-blue-900 mb-8 text-center tracking-tight drop-shadow">Evaluasi Performa Pemain NBA</h1>
 
+<<<<<<< HEAD
     <form method="GET" class="mb-8 flex flex-wrap gap-4 items-end justify-center">
         <div>
             <label for="season" class="block font-semibold mb-1">Musim</label>
@@ -189,6 +190,54 @@ function getPlayerName($playerID, $players) {
             <label for="playerName" class="block font-semibold mb-1">Nama Pemain</label>
             <input type="text" name="playerName" id="playerName" class="border rounded px-3 py-1 shadow" placeholder="Cari nama pemain" value="<?= htmlspecialchars($filterPlayerName) ?>">
         </div>
+=======
+    <!-- Main Content Area -->
+    <div class="max-w-screen-2xl mx-auto p-4 md:p-6 lg:p-8">
+
+            <header class="mb-6 md:mb-8">
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-800">Player Performance Dashboard</h1>
+                <p class="text-sm text-slate-500 mt-1">Dive into NBA player statistics with interactive filters and visualizations.</p>
+            </header>
+
+            <div class="bg-white p-5 md:p-6 rounded-xl shadow-lg mb-8 sticky top-4 z-20 border border-gray-300">
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-x-4 gap-y-4 items-end">
+            <div>
+                <label for="season" class="block text-xs font-medium text-gray-600 mb-1.5">Season</label>
+                <select name="season" id="season" class="w-full border border-gray-400 rounded-md text-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 appearance-none">
+                    <option value="">All Seasons</option>
+                    <?php foreach ($seasons as $season): ?>
+                        <option value="<?= htmlspecialchars($season) ?>" <?= ($filterSeason == $season) ? 'selected' : '' ?>><?= htmlspecialchars($season) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label for="team" class="block text-xs font-medium text-gray-600 mb-1.5">Team</label>
+                <select name="team" id="team" class="w-full border border-gray-400 rounded-md text-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 appearance-none">
+                    <option value="">All Teams</option>
+                    <?php foreach ($teamDisplayNames as $tmID => $name): ?>
+                        <option value="<?= htmlspecialchars($tmID) ?>" <?= ($filterTeam == $tmID) ? 'selected' : '' ?>><?= htmlspecialchars($name) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label for="pos" class="block text-xs font-medium text-gray-600 mb-1.5">Position</label>
+                <select name="pos" id="pos" class="w-full border border-gray-400 rounded-md text-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 appearance-none">
+                    <option value="">All Positions</option>
+                    <?php foreach ($positions as $pos): ?>
+                        <option value="<?= htmlspecialchars($pos) ?>" <?= ($filterPos == $pos) ? 'selected' : '' ?>><?= htmlspecialchars($pos) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label for="playerName" class="block text-xs font-medium text-gray-600 mb-1.5">Player Name</label>
+                <input type="text" name="playerName" id="playerName" class="w-full border border-gray-400 rounded-md text-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., LeBron James" value="<?= htmlspecialchars($filterPlayerName) ?>">
+            </div>
+            <button type="submit" class="btn-primary w-full flex items-center justify-center">
+                <i class="fas fa-sliders-h mr-2 fa-sm"></i> Apply Filters
+            </button>
+        </form>
+    </div>
+>>>>>>> 26792aa9c0c7a787d31831c4424625bd2af6c8a4
 
     <!-- Stat Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8 max-w-6xl mx-auto">
