@@ -19,18 +19,20 @@ if (!$teamYear || !$teamName) {
     exit;
 }
 
-// Ambil detail tim
+// Ambil detail tim - TAHUN INI TETAP MENGGUNAKAN $teamYear ASLI
 $teamDetail = $teams->findOne(['year' => (int)$teamYear, 'name' => $teamName]);
 
 if (!$teamDetail) {
-    echo "<div class='container mx-auto mt-8 p-6 bg-white rounded-md shadow-md text-center'><p class='text-gray-700'>Detail tim tidak ditemukan.</p><p><a href='teams_stats.php' class='text-blue-500 hover:underline'>Kembali ke Statistik Tim</a></p></div>";
+    echo "<div class='container mx-auto mt-8 p-6 bg-white rounded-md shadow-md text-center'><p class='text-gray-700'>Detail tim tidak ditemukan untuk tahun " . htmlspecialchars($teamYear) . ".</p><p><a href='teams_stats.php' class='text-blue-500 hover:underline'>Kembali ke Statistik Tim</a></p></div>";
     exit;
 }
 
-// Ambil data playoff untuk tim ini pada tahun ini
+// Ambil data playoff untuk tim ini PADA TAHUN YANG DISESUAIKAN
 $playoffsCollection = $db->series_post;
+$playoffYearInDb = (int)$teamYear - 1; // PENYESUAIAN TAHUN UNTUK DATA PLAYOFF
+
 $playoffData = $playoffsCollection->find([
-    'year' => (int)$teamYear,
+    'year' => $playoffYearInDb, // Menggunakan tahun yang sudah disesuaikan
     '$or' => [
         ['tmIDWinner' => $teamDetail['tmID']],
         ['tmIDLoser' => $teamDetail['tmID']]
@@ -55,7 +57,8 @@ foreach ($playoffData as $playoff) {
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detail Tim - <?= htmlspecialchars($teamDetail['name']) ?> (<?= $teamDetail['year'] ?>) - NBA Dashboard</title>
+    <!-- Judul tetap menampilkan tahun yang diminta pengguna -->
+    <title>Detail Tim - <?= htmlspecialchars($teamDetail['name']) ?> (<?= htmlspecialchars($teamYear) ?>) - NBA Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;400&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Montserrat', sans-serif; }
@@ -72,7 +75,8 @@ foreach ($playoffData as $playoff) {
     <div class="max-w-3xl mx-auto mt-10 p-8 bg-white rounded-2xl shadow-xl">
         <div class="flex flex-col md:flex-row items-center justify-between mb-6">
             <div>
-                <h2 class="text-3xl font-extrabold text-green-900 mb-2 drop-shadow">Tim: <?= htmlspecialchars($teamDetail['name']) ?> <span class="text-lg text-gray-500">(<?= $teamDetail['year'] ?>)</span></h2>
+                <!-- Tampilkan tahun yang diminta pengguna ($teamYear), bukan $playoffYearInDb -->
+                <h2 class="text-3xl font-extrabold text-green-900 mb-2 drop-shadow">Tim: <?= htmlspecialchars($teamDetail['name']) ?> <span class="text-lg text-gray-500">(<?= htmlspecialchars($teamYear) ?>)</span></h2>
                 <span class="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold mb-2"><?= $teamDetail['confID'] ?> Conference</span>
             </div>
             <img src="image/nba.png" alt="NBA" class="h-16 md:ml-8 drop-shadow-lg">
@@ -101,26 +105,54 @@ foreach ($playoffData as $playoff) {
             <h3 class="text-xl font-bold text-green-700 mb-2">Status Playoff:
                 <span class="font-semibold">
                     <?php
+                    // Logika status playoff tetap sama, karena $playoffData sekarang sudah berisi data yang benar (meskipun dari tahun DB yang berbeda)
                     if (!empty($playoffData)) {
                         $lastPlayoffResult = null;
-                        foreach (array_reverse($playoffData) as $playoff) {
+                        $wonFinalRound = false; // Flag untuk menandakan apakah tim memenangkan round terakhir yang tercatat
+
+                        // Urutkan playoffData berdasarkan round, jika belum terurut
+                        // Asumsi data sudah terurut dari database atau tidak masalah urutannya untuk logika ini
+                        // Jika urutan penting, Anda mungkin perlu mengurutkannya di sini
+                        // usort($playoffData, fn($a, $b) => $a['round'] <=> $b['round']);
+
+
+                        $maxRoundReached = 0;
+                        foreach ($playoffData as $playoff) {
                             if ($playoff['tmIDLoser'] === $teamDetail['tmID']) {
                                 $lastPlayoffResult = "Kalah di Round " . $playoff['round'];
-                                break;
-                            } elseif ($playoff['tmIDWinner'] === $teamDetail['tmID'] && !isset($finalRoundLoss)) {
-                                // Jika menang, kita perlu cari kemungkinan kekalahan di round selanjutnya
-                                // Kita bisa tandai bahwa tim ini menang di suatu round, tapi belum tentu final result
+                                // Jika kalah, kita hentikan pencarian status lebih lanjut untuk kekalahan
+                                break; 
+                            } elseif ($playoff['tmIDWinner'] === $teamDetail['tmID']) {
+                                // Tandai bahwa tim ini menang di suatu round
+                                // Kita perlu cek apakah ini round terakhir yang dimainkan tim
+                                if ($playoff['round'] > $maxRoundReached) {
+                                    $maxRoundReached = $playoff['round'];
+                                }
                             }
                         }
-                        if ($lastPlayoffResult) {
+
+                        if ($lastPlayoffResult) { // Jika ada catatan kekalahan
                             echo $lastPlayoffResult;
-                        } elseif ($teamDetail['playoff'] === 'Y') {
-                            echo "Tidak ada catatan kekalahan playoff (mungkin juara atau data tidak lengkap)";
+                        } elseif ($maxRoundReached > 0) { // Jika ada catatan kemenangan dan tidak ada kekalahan setelahnya
+                            // Cek apakah ada round selanjutnya dimana tim ini tidak tercatat (bisa jadi juara)
+                            // Ini asumsi, karena kita tidak tahu apakah ini round final atau tidak
+                            // Untuk NBA, round 4 (Finals) adalah yang tertinggi
+                            if ($maxRoundReached == 4) { // Asumsi round 4 adalah Finals
+                                echo "Juara NBA";
+                            } else {
+                                echo "Menang hingga Round " . $maxRoundReached . " (data mungkin tidak lengkap untuk hasil akhir)";
+                            }
+                        } elseif ($teamDetail['playoff'] === 'Y') { // Lolos playoff tapi tidak ada data menang/kalah spesifik di $playoffData
+                             echo "Tidak ada catatan detail playoff (data mungkin tidak lengkap)";
+                        } else { // Tidak lolos playoff berdasarkan data tim
+                            echo "Tidak Lolos";
+                        }
+                    } else { // Tidak ada data playoff sama sekali di $playoffData
+                        if ($teamDetail['playoff'] === 'Y') {
+                            echo "Lolos Playoff (tidak ada detail pertandingan tersedia untuk tahun data " . $playoffYearInDb . ")";
                         } else {
                             echo "Tidak Lolos";
                         }
-                    } else {
-                        echo "Tidak Lolos";
                     }
                     ?>
                 </span>
@@ -129,7 +161,7 @@ foreach ($playoffData as $playoff) {
 
         <?php if (!empty($playoffData)): ?>
             <div class="mb-8">
-                <h3 class="text-xl font-bold text-blue-700 mb-4">Performa Playoff</h3>
+                <h3 class="text-xl font-bold text-blue-700 mb-4">Performa Playoff (Data dari Tahun <?= $playoffYearInDb ?>)</h3>
                 <div class="overflow-x-auto">
                     <table class="min-w-full table-auto border-collapse border border-gray-200 text-sm mb-4">
                         <thead>
@@ -144,13 +176,18 @@ foreach ($playoffData as $playoff) {
                             <?php foreach ($playoffData as $playoff): ?>
                                 <?php
                                 $isWinner = $playoff['tmIDWinner'] === $teamDetail['tmID'];
-                                $opponent = $isWinner ? $playoff['tmIDLoser'] : $playoff['tmIDWinner'];
+                                $opponentTeamID = $isWinner ? $playoff['tmIDLoser'] : $playoff['tmIDWinner'];
+                                
+                                // Coba ambil nama tim lawan dari koleksi teams untuk tahun playoff yang sesuai
+                                $opponentDetail = $teams->findOne(['year' => $playoffYearInDb, 'tmID' => $opponentTeamID]);
+                                $opponentName = $opponentDetail ? $opponentDetail['name'] : $opponentTeamID; // Fallback ke tmID jika nama tidak ditemukan
+
                                 $result = $isWinner ? "Menang" : "Kalah";
                                 $score = $playoff['W'] . " - " . $playoff['L'];
                                 ?>
                                 <tr class="border border-gray-200 hover:bg-blue-50 transition">
                                     <td class="border px-3 py-1"><?= $playoff['round'] ?></td>
-                                    <td class="border px-3 py-1"><?= htmlspecialchars($opponent) ?></td>
+                                    <td class="border px-3 py-1"><?= htmlspecialchars($opponentName) ?></td>
                                     <td class="border px-3 py-1 font-semibold <?= $isWinner ? 'text-green-700' : 'text-red-600' ?>"><?= $result ?></td>
                                     <td class="border px-3 py-1"><?= $score ?></td>
                                 </tr>
@@ -166,7 +203,15 @@ foreach ($playoffData as $playoff) {
             </div>
         <?php else: ?>
             <div class="mb-8">
-                <p class="mt-4 text-gray-600 text-center"><?= $teamDetail['playoff'] === 'Y' ? 'Tidak ada detail playoff yang tersedia.' : 'Tim tidak lolos playoff.' ?></p>
+                 <p class="mt-4 text-gray-600 text-center">
+                    <?php
+                    if ($teamDetail['playoff'] === 'Y') {
+                        echo 'Tidak ada detail playoff yang tersedia untuk tahun data ' . $playoffYearInDb . '.';
+                    } else {
+                        echo 'Tim tidak lolos playoff pada tahun ' . htmlspecialchars($teamYear) . '.';
+                    }
+                    ?>
+                </p>
             </div>
         <?php endif; ?>
 
