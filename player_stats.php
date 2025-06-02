@@ -1,8 +1,8 @@
 <?php
 require_once 'db.php';
-include 'header.php';
+include 'header.php'; // Asumsi header.php tidak mengeluarkan output HTML sebelum <!DOCTYPE html>
 
-// --- BAGIAN AWAL PHP (Filter, data unik dropdown) TETAP SAMA ---
+// --- BAGIAN AWAL PHP (Filter, data unik dropdown) ---
 $filterSeason = $_GET['season'] ?? '';
 $filterTeam = $_GET['team'] ?? '';
 $filterPos = $_GET['pos'] ?? '';
@@ -57,9 +57,9 @@ if ($filterPos || $filterPlayerName) {
             $playerIDsForFilter[] = $p['playerID'];
         }
     }
-    if (empty($playerIDsForFilter)) {
+    if (empty($playerIDsForFilter) && ($filterPos || $filterPlayerName)) { // Hanya set __NO_MATCH__ jika filter ini aktif dan tidak ada hasil
         $query['playerID'] = ['$in' => ['__NO_MATCH__']];
-    } else {
+    } elseif (!empty($playerIDsForFilter)) {
         $query['playerID'] = ['$in' => array_values(array_unique($playerIDsForFilter))];
     }
 }
@@ -68,16 +68,14 @@ if ($filterPos || $filterPlayerName) {
 $totalPointsAllFiltered = $totalAssistsAllFiltered = $totalReboundsAllFiltered = 0;
 $totalStealsAllFiltered = $totalBlocksAllFiltered = $totalTurnoversAllFiltered = 0;
 $totalGamesPlayedAllFiltered = 0;
-$totalPlayerSeasonEntries = $playersTeams->countDocuments($query); // Hitung total entri yang cocok
+$totalPlayerSeasonEntries = $playersTeams->countDocuments($query);
 
 if ($totalPlayerSeasonEntries > 0) {
-    // Jika ada data, kita perlu mengambil semua data yang cocok untuk kalkulasi KPI
-    // Ini bisa memakan resource jika datanya sangat besar.
-    // Alternatifnya adalah menggunakan MongoDB aggregation framework.
-    // Untuk kesederhanaan, kita akan loop jika jumlahnya tidak terlalu ekstrim.
-    // Batasi pengambilan data untuk KPI jika totalnya sangat besar untuk performa
-    $limitForKpiCalc = 5000; // Misalnya, batasi hingga 5000 entri untuk kalkulasi KPI
-    $allFilteredDataCursor = $playersTeams->find($query, ['limit' => $limitForKpiCalc]); // Tanpa skip, tapi dengan limit jika perlu
+    $limitForKpiCalc = 5000;
+    $kpiQueryOptions = ['limit' => $limitForKpiCalc];
+    // Jika $totalPlayerSeasonEntries > $limitForKpiCalc, mungkin lebih baik pakai agregasi
+    // Tapi untuk sekarang, kita pakai find dengan limit untuk KPI
+    $allFilteredDataCursor = $playersTeams->find($query, $kpiQueryOptions);
 
     foreach ($allFilteredDataCursor as $row) {
         $totalPointsAllFiltered += $row['points'] ?? 0;
@@ -96,41 +94,56 @@ $avgRebounds = $totalGamesPlayedAllFiltered > 0 ? round($totalReboundsAllFiltere
 $avgSteals = $totalGamesPlayedAllFiltered > 0 ? round($totalStealsAllFiltered / $totalGamesPlayedAllFiltered, 1) : 0;
 $avgBlocks = $totalGamesPlayedAllFiltered > 0 ? round($totalBlocksAllFiltered / $totalGamesPlayedAllFiltered, 1) : 0;
 $avgTurnovers = $totalGamesPlayedAllFiltered > 0 ? round($totalTurnoversAllFiltered / $totalGamesPlayedAllFiltered, 1) : 0;
-$avgGamePlayedPerEntry = $totalPlayerSeasonEntries > 0 ? round($totalGamesPlayedAllFiltered / $totalPlayerSeasonEntries, 1) : 0;
-// Jika Anda menggunakan $limitForKpiCalc dan $totalPlayerSeasonEntries > $limitForKpiCalc,
-// maka $avgGamePlayedPerEntry akan berdasarkan data yang diambil untuk kalkulasi KPI, bukan total keseluruhan.
-// Ini adalah trade-off untuk performa. Jika ingin 100% akurat untuk semua data, hapus limit pada $allFilteredDataCursor.
+// $avgGamePlayedPerEntry akan dihitung berdasarkan data yang diambil untuk KPI.
+// Jika $limitForKpiCalc lebih kecil dari $totalPlayerSeasonEntries, ini bukan rata-rata dari semua entri.
+$actualEntriesForKpiCalc = ($totalPlayerSeasonEntries > $limitForKpiCalc) ? $limitForKpiCalc : $totalPlayerSeasonEntries;
+$avgGamePlayedPerEntry = $actualEntriesForKpiCalc > 0 ? round($totalGamesPlayedAllFiltered / $actualEntriesForKpiCalc, 1) : 0;
 
-// --- PAGINATION LOGIC (TETAP SAMA) ---
+
+// --- PAGINATION LOGIC ---
 $itemsPerPage = 25;
 $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($currentPage < 1) $currentPage = 1;
 
-$totalPages = ceil($totalPlayerSeasonEntries / $itemsPerPage);
-if ($currentPage > $totalPages && $totalPages > 0) $currentPage = $totalPages;
-if ($totalPages == 0) $currentPage = 1;
+$totalPages = $totalPlayerSeasonEntries > 0 ? ceil($totalPlayerSeasonEntries / $itemsPerPage) : 1;
+if ($currentPage > $totalPages) $currentPage = $totalPages;
 
 $offset = ($currentPage - 1) * $itemsPerPage;
 
-$options = [
+$optionsForPage = [
     'limit' => $itemsPerPage,
     'skip' => $offset,
     'sort' => ['year' => -1, 'points' => -1]
 ];
-$cursor = $playersTeams->find($query, $options); // Query untuk data halaman saat ini
+$cursor = $playersTeams->find($query, $optionsForPage);
 
-// Ambil hasil dan playerID untuk halaman saat ini (TETAP SAMA)
-$data = [];
+// --- AMBIL DATA UNTUK TABEL DAN CHART (DATA HALAMAN SAAT INI) ---
+$data = []; // Ini akan berisi data untuk halaman saat ini, termasuk semua field yang dibutuhkan chart
 $playerIDsFromCursor = [];
 foreach ($cursor as $item) {
-    $data[] = $item;
+    // Pastikan semua field yang dibutuhkan ada di sini
+    $dataRow = [
+        'playerID' => $item['playerID'] ?? null,
+        'year' => $item['year'] ?? null,
+        'tmID' => $item['tmID'] ?? null,
+        'GP' => $item['GP'] ?? 0,
+        'points' => $item['points'] ?? 0,
+        'assists' => $item['assists'] ?? 0,
+        'rebounds' => $item['rebounds'] ?? 0,
+        'steals' => $item['steals'] ?? 0,
+        'blocks' => $item['blocks'] ?? 0,
+        'turnovers' => $item['turnovers'] ?? 0,
+        'fgMade' => $item['fgMade'] ?? 0,
+        'fgAttempted' => $item['fgAttempted'] ?? 0,
+        // tambahkan field lain dari players_teams jika perlu
+    ];
+    $data[] = $dataRow;
     if (isset($item['playerID']) && is_string($item['playerID'])) {
         $playerIDsFromCursor[] = $item['playerID'];
     }
 }
 $playerIDsFromCursor = array_values(array_unique(array_filter($playerIDsFromCursor, 'is_string')));
 
-// Ambil detail pemain untuk halaman saat ini (TETAP SAMA)
 $playersDetailsMap = [];
 if (!empty($playerIDsFromCursor)) {
     $playersInfoCursor = $players->find(
@@ -142,28 +155,21 @@ if (!empty($playerIDsFromCursor)) {
     }
 }
 
-// Tambahkan nama dan posisi ke $data untuk halaman saat ini (TETAP SAMA)
 $processedData = [];
-foreach ($data as $item) {
+foreach ($data as $item) { // Loop melalui $data yang sudah berisi semua field numerik
     $playerDetail = isset($item['playerID']) && isset($playersDetailsMap[$item['playerID']]) ? $playersDetailsMap[$item['playerID']] : null;
-    $tempItem = $item;
+    $tempItem = $item; // $item sudah berisi semua field yang dibutuhkan chart (points, assists, dll.)
     $tempItem['playerName'] = trim(($playerDetail['firstName'] ?? '') . ' ' . ($playerDetail['lastName'] ?? ($item['playerID'] ?? 'Unknown')));
-    $tempItem['pos'] = $playerDetail['pos'] ?? '-';
+    $tempItem['pos'] = $playerDetail['pos'] ?? '-'; // Posisi diambil dari $playersDetailsMap
     $processedData[] = $tempItem;
 }
-$data = $processedData;
-
-// Fungsi bantu getPlayerName tetap sama
-function getPlayerName($playerID, $playersCollection)
-{ /* ... */
-}
+$data = $processedData; // $data sekarang siap untuk tabel dan chart (chartDataSource)
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <!-- ... HEAD CONTENT TETAP SAMA (termasuk CSS pagination) ... -->
     <meta charset="UTF-8" />
     <title>Player Performance Dashboard - NBA Stats</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -199,10 +205,11 @@ function getPlayerName($playerID, $playersCollection)
         }
 
         .table-scroll {
-            max-height: 500px;
+            max-height: 60vh;
             overflow-y: auto;
         }
 
+        /* Adjusted for better view with pagination */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -251,6 +258,7 @@ function getPlayerName($playerID, $playersCollection)
             outline: 2px solid transparent;
             outline-offset: 2px;
             border-color: #4f46e5;
+            /* Indigo-600 */
             box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.4);
         }
 
@@ -314,7 +322,6 @@ function getPlayerName($playerID, $playersCollection)
 <body class="text-gray-800 antialiased">
 
     <div class="max-w-screen-2xl mx-auto p-4 md:p-6 lg:p-8">
-        <!-- ... HEADER DAN FORM FILTER TETAP SAMA ... -->
         <header class="mb-6 md:mb-8">
             <h1 class="text-2xl md:text-3xl font-bold text-slate-800">Player Performance Dashboard</h1>
             <p class="text-sm text-slate-500 mt-1">Dive into NBA player statistics with interactive filters and visualizations.</p>
@@ -322,7 +329,6 @@ function getPlayerName($playerID, $playersCollection)
 
         <div class="bg-white p-5 md:p-6 rounded-xl shadow-lg mb-8 sticky top-4 z-20 border border-gray-300">
             <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-x-4 gap-y-4 items-end">
-                <!-- Filter selects and input -->
                 <div>
                     <label for="season" class="block text-xs font-medium text-gray-600 mb-1.5">Season</label>
                     <select name="season" id="season" class="w-full border border-gray-400 rounded-md text-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 appearance-none">
@@ -360,7 +366,6 @@ function getPlayerName($playerID, $playersCollection)
             </form>
         </div>
 
-        <!-- Stat Summary Cards (Menggunakan data agregat dari semua hasil filter) -->
         <?php
         $statCardsData = [
             ['label' => 'Avg Points/Game', 'value' => $avgPoints, 'color' => 'text-blue-600', 'icon' => 'fa-solid fa-basketball', 'bg' => 'bg-blue-50'],
@@ -387,7 +392,6 @@ function getPlayerName($playerID, $playersCollection)
             <?php endforeach; ?>
         </div>
 
-        <!-- Data Table Section (TETAP SAMA) -->
         <div class="table-container p-0 mb-8">
             <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="text-lg font-semibold text-slate-700">Player Statistics Breakdown</h2>
@@ -398,6 +402,8 @@ function getPlayerName($playerID, $playersCollection)
                     <span class="text-xs font-medium text-gray-500">
                         Showing <?= $startEntry ?>-<?= $endEntry ?> of <?= $totalPlayerSeasonEntries ?> entries
                     </span>
+                <?php else: ?>
+                    <span class="text-xs font-medium text-gray-500">No entries found</span>
                 <?php endif; ?>
             </div>
             <div class="overflow-x-auto table-scroll">
@@ -454,9 +460,9 @@ function getPlayerName($playerID, $playersCollection)
                             <tr>
                                 <td colspan="13" class="text-center p-10 text-gray-500">
                                     <div class="flex flex-col items-center">
-                                        <i class="fas fa-empty-set fa-3x text-slate-300 mb-4"></i>
+                                        <i class="fas fa-basketball-ball fa-3x text-slate-300 mb-4 opacity-50"></i> <!-- Changed icon -->
                                         <p class="font-semibold text-slate-600">No Player Data Found</p>
-                                        <p class="text-sm">Please adjust your filters or try a different search.</p>
+                                        <p class="text-sm">Try adjusting your filters or searching for a different player.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -465,7 +471,6 @@ function getPlayerName($playerID, $playersCollection)
                 </table>
             </div>
 
-            <!-- Pagination Controls (TETAP SAMA) -->
             <?php if ($totalPages > 1): ?>
                 <div class="px-5 py-4 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
                     <div class="text-xs text-slate-500">
@@ -475,12 +480,8 @@ function getPlayerName($playerID, $playersCollection)
                         <?php
                         $queryParams = $_GET;
                         unset($queryParams['page']);
-                        $baseUrl = 'player_stats.php';
-                        if (!empty($queryParams)) {
-                            $baseUrl .= '?' . http_build_query($queryParams) . '&';
-                        } else {
-                            $baseUrl .= '?';
-                        }
+                        $baseUrl = 'player_stats.php?' . http_build_query($queryParams);
+                        $baseUrl .= (empty($queryParams) ? '' : '&'); // Ensure correct query string format
                         ?>
                         <a href="<?= ($currentPage > 1) ? $baseUrl . 'page=' . ($currentPage - 1) : '#' ?>"
                             class="pagination-link <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
@@ -495,20 +496,13 @@ function getPlayerName($playerID, $playersCollection)
                         }
                         if ($startPage > 1) {
                             echo '<a href="' . $baseUrl . 'page=1" class="pagination-link">1</a>';
-                            if ($startPage > 2) {
-                                echo '<span class="px-2 py-1.5 text-slate-500">...</span>';
-                            }
+                            if ($startPage > 2) echo '<span class="px-2 py-1.5 text-slate-500">...</span>';
                         }
                         for ($i = $startPage; $i <= $endPage; $i++): ?>
-                            <a href="<?= $baseUrl . 'page=' . $i ?>"
-                                class="pagination-link <?= ($i == $currentPage) ? 'active' : '' ?>">
-                                <?= $i ?>
-                            </a>
+                            <a href="<?= $baseUrl . 'page=' . $i ?>" class="pagination-link <?= ($i == $currentPage) ? 'active' : '' ?>"><?= $i ?></a>
                         <?php endfor;
                         if ($endPage < $totalPages):
-                            if ($endPage < $totalPages - 1) {
-                                echo '<span class="px-2 py-1.5 text-slate-500">...</span>';
-                            }
+                            if ($endPage < $totalPages - 1) echo '<span class="px-2 py-1.5 text-slate-500">...</span>';
                             echo '<a href="' . $baseUrl . 'page=' . $totalPages . '" class="pagination-link">' . $totalPages . '</a>';
                         endif; ?>
                         <a href="<?= ($currentPage < $totalPages) ? $baseUrl . 'page=' . ($currentPage + 1) : '#' ?>"
@@ -520,38 +514,39 @@ function getPlayerName($playerID, $playersCollection)
             <?php endif; ?>
         </div>
 
-        <!-- Chart Section (TETAP SAMA, menggunakan data halaman saat ini) -->
-        <?php if (count($data) > 0): ?>
+        <?php if (count($data) > 0): // Charts hanya ditampilkan jika ada data di halaman saat ini 
+        ?>
             <section class="mt-10">
                 <div class="px-1 py-4 mb-2">
                     <h2 class="text-xl font-semibold text-slate-700 text-center">Visual Insights</h2>
                     <p class="text-sm text-slate-500 text-center mt-1.5">Key statistics visualized for up to 15 player-seasons on this page.</p>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="chart-card min-h-[380px] md:min-h-[420px]">
+                    <div class="chart-card min-h-[380px] md:min-h-[420px] flex flex-col">
                         <h3 class="text-base font-semibold mb-4 text-slate-600">Player Core Stats Comparison</h3>
-                        <canvas id="barChartPlayers"></canvas>
+                        <div class="flex-grow relative"><canvas id="barChartPlayers"></canvas></div>
                     </div>
-                    <div class="chart-card min-h-[380px] md:min-h-[420px]">
+                    <div class="chart-card min-h-[380px] md:min-h-[420px] flex flex-col">
                         <h3 class="text-base font-semibold mb-4 text-slate-600">Performance Radar (First Player in List)</h3>
-                        <canvas id="radarChartPlayer"></canvas>
+                        <div class="flex-grow relative"><canvas id="radarChartPlayer"></canvas></div>
                     </div>
                 </div>
             </section>
         <?php endif; ?>
+
         <footer class="text-center mt-12 py-6 border-t border-gray-200">
             <p class="text-xs text-slate-500">© <?= date("Y") ?> NBA Stats Dashboard. All data is for demonstrational purposes.</p>
         </footer>
     </div>
 
     <script>
-        // ... KODE JAVASCRIPT UNTUK CHART TETAP SAMA ...
-        // Menggunakan `const chartDataSource = <?= json_encode($data); ?>;`
         document.addEventListener('DOMContentLoaded', function() {
             const chartDataSource = <?= json_encode($data); ?>;
+
             if (chartDataSource && chartDataSource.length > 0) {
                 const chartData = chartDataSource.slice(0, 15);
 
+                // Bar Chart
                 const playerNamesBar = chartData.map(d => (d.playerName || 'N/A') + ' (' + (d.year || 'N/A') + ')');
                 const pointsDataBar = chartData.map(d => d.points || 0);
                 const assistsDataBar = chartData.map(d => d.assists || 0);
@@ -574,7 +569,7 @@ function getPlayerName($playerID, $playersCollection)
                                         topRight: 5
                                     },
                                     barPercentage: 0.7,
-                                    categoryPercentage: 0.8,
+                                    categoryPercentage: 0.8
                                 },
                                 {
                                     label: 'Assists',
@@ -587,7 +582,7 @@ function getPlayerName($playerID, $playersCollection)
                                         topRight: 5
                                     },
                                     barPercentage: 0.7,
-                                    categoryPercentage: 0.8,
+                                    categoryPercentage: 0.8
                                 },
                                 {
                                     label: 'Rebounds',
@@ -600,7 +595,7 @@ function getPlayerName($playerID, $playersCollection)
                                         topRight: 5
                                     },
                                     barPercentage: 0.7,
-                                    categoryPercentage: 0.8,
+                                    categoryPercentage: 0.8
                                 }
                             ]
                         },
@@ -633,7 +628,14 @@ function getPlayerName($playerID, $playersCollection)
                                     usePointStyle: true,
                                     callbacks: {
                                         label: function(context) {
-                                            /* ... */
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                label += context.parsed.y;
+                                            }
+                                            return label;
                                         }
                                     }
                                 }
@@ -661,35 +663,39 @@ function getPlayerName($playerID, $playersCollection)
                                         font: {
                                             size: 10
                                         },
-                                        autoSkipPadding: 10
+                                        autoSkipPadding: 10,
+                                        maxRotation: 70,
+                                        minRotation: 70
                                     }
-                                }
+                                } // Added rotation for long labels
                             },
                             interaction: {
                                 mode: 'index',
                                 intersect: false,
-                            },
+                            }
                         }
                     });
                 } else {
                     const barChartContainer = document.getElementById('barChartPlayers')?.parentNode;
-                    if (barChartContainer) barChartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-500"><i class="fas fa-chart-bar fa-2x mb-3 text-slate-300"></i><p class="text-sm">Bar Chart placeholder: No data or canvas not found.</p></div>';
+                    if (barChartContainer) barChartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-500"><i class="fas fa-chart-bar fa-2x mb-3 text-slate-300"></i><p class="text-sm">Bar Chart placeholder: Canvas not found.</p></div>';
                 }
 
-
+                // Radar Chart
                 const radarCtx = document.getElementById('radarChartPlayer')?.getContext('2d');
                 if (radarCtx && chartData.length > 0) {
                     const firstPlayerData = chartData[0];
+                    const radarDataValues = [
+                        firstPlayerData.points || 0, firstPlayerData.assists || 0, firstPlayerData.rebounds || 0,
+                        firstPlayerData.steals || 0, firstPlayerData.blocks || 0, firstPlayerData.turnovers || 0
+                    ];
+
                     new Chart(radarCtx, {
                         type: 'radar',
                         data: {
                             labels: ['Points', 'Assists', 'Rebounds', 'Steals', 'Blocks', 'Turnovers'],
                             datasets: [{
                                 label: (firstPlayerData.playerName || 'N/A') + ' (' + (firstPlayerData.year || 'N/A') + ')',
-                                data: [
-                                    firstPlayerData.points || 0, firstPlayerData.assists || 0, firstPlayerData.rebounds || 0,
-                                    firstPlayerData.steals || 0, firstPlayerData.blocks || 0, firstPlayerData.turnovers || 0
-                                ],
+                                data: radarDataValues,
                                 fill: true,
                                 backgroundColor: 'rgba(79, 70, 229, 0.25)',
                                 borderColor: 'rgba(79, 70, 229, 0.8)',
@@ -727,7 +733,7 @@ function getPlayerName($playerID, $playersCollection)
                                     borderWidth: 1,
                                     padding: 10,
                                     cornerRadius: 6,
-                                    usePointStyle: true,
+                                    usePointStyle: true
                                 }
                             },
                             scales: {
@@ -782,14 +788,17 @@ function getPlayerName($playerID, $playersCollection)
                     playerData.points || 0, playerData.assists || 0, playerData.rebounds || 0,
                     playerData.steals || 0, playerData.blocks || 0, playerData.turnovers || 0
                 ];
-                const maxStat = Math.max(...stats.filter(s => typeof s === 'number'));
+                const maxStat = Math.max(...stats.filter(s => typeof s === 'number' && !isNaN(s)));
                 if (maxStat === 0) return 1;
                 if (maxStat <= 5) return 1;
                 if (maxStat <= 10) return 2;
                 if (maxStat <= 20) return 4;
                 if (maxStat <= 30) return 5;
                 if (maxStat <= 50) return 10;
-                return Math.max(1, Math.ceil(maxStat / 5));
+                if (maxStat <= 100) return 20;
+                if (maxStat <= 200) return 40;
+                if (maxStat <= 500) return 100;
+                return Math.max(1, Math.ceil(maxStat / 50)); // Adjusted denominator for very large values
             }
         });
     </script>
