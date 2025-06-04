@@ -52,7 +52,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8; /* Latar belakang abu-abu muda netral */
+            background-color: #e0e7ff; /* Latar belakang abu-abu muda netral */
             color: #1a202c; /* Warna teks utama (abu-abu gelap) */
         }
         .stat-card {
@@ -143,7 +143,7 @@
 
 <body class="text-slate-800 antialiased">
 
-    <div class="max-w-screen-xl mx-auto p-4 md:p-6 lg:p-8">
+    <div class="max-w-screen-2xl mx-auto p-4 md:p-6 lg:p-8">
 
         <header class="mb-8 text-center md:text-left">
             <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800">Dashboard Performa Tim NBA</h1>
