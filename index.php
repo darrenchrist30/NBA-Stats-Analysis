@@ -495,7 +495,7 @@ include 'header.php';
                     foreach ($teams_data as $team):
                     ?>
                         <div class="swiper-slide">
-                            <a href="team_stats.php?teams[]=<?php echo urlencode($team['code']); ?>" title="View stats for <?php echo htmlspecialchars($team['name']); ?>">
+                            <a href="teams_stats.php?teams[]=<?php echo urlencode($team['code']); ?>" title="View stats for <?php echo htmlspecialchars($team['name']); ?>">
                                 <img src="<?php echo htmlspecialchars($team['logo']); ?>" alt="<?php echo htmlspecialchars($team['name']); ?> Logo" loading="lazy">
                             </a>
                         </div>
@@ -503,7 +503,7 @@ include 'header.php';
                 </div>
                 <div class="swiper-pagination"></div>
             </div>
-            <div class="text-center mt-8"> <a href="team_stats.php" class="hero-cta-button text-sm px-6 py-3">View All Teams</a> </div>
+            <div class="text-center mt-8"> <a href="teams_stats.php" class="hero-cta-button text-sm px-6 py-3">View All Teams</a> </div>
         </section>
         <section class="content-box text-center py-12 md:py-16 scroll-reveal">
             <h2 class="section-title">READY TO DIVE DEEPER?</h2>
