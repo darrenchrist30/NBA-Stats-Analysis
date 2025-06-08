@@ -1,7 +1,7 @@
 <?php
 require_once 'autoload.php'; // Sesuaikan path jika struktur folder Anda berbeda
 
-$mongoConnectionString = "mongodb://localhost:27017";
+$mongoConnectionString = "mongodb://mongo:mongo@localhost:27017";
 $databaseName = "nba_projek";
 
 try {

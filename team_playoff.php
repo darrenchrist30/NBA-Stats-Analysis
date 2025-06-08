@@ -2,41 +2,42 @@
 require_once 'db.php';
 // include 'header.php';
 
-$year_param = $_GET['year'] ?? null;
-$tmID_param = $_GET['tmID'] ?? null; // Gunakan tmID sebagai identifier utama, bukan nama
-// $teamName_param = $_GET['name'] ?? null; // Nama bisa diambil nanti
+$year_param = $_GET['year'] ?? null; // Ini akan menerima TAHUN AWAL MUSIM dari teams_stats.php
+$tmID_param = $_GET['tmID'] ?? null;
 
 if (!$year_param || !$tmID_param) {
     die("Parameter tahun (year) dan ID Tim (tmID) diperlukan.");
 }
-$year_param_int = (int)$year_param;
+$year_param_int = (int)$year_param; // Ini adalah TAHUN AWAL MUSIM
+
+// Tentukan tahun musim untuk ditampilkan (TAHUN AKHIR MUSIM)
+$display_season_year = $year_param_int + 1;
 
 // Ambil data tim dan data playoff yang disematkan dari coaches_collection
 $pipelinePlayoff = [
     ['$unwind' => '$teams'],
-    ['$unwind' => '$teams.team_season_details'], // Kita butuh ini untuk info tim
+    ['$unwind' => '$teams.team_season_details'],
     [
         '$match' => [
+            // Query ke database tetap menggunakan TAHUN AWAL MUSIM ($year_param_int)
             'teams.team_season_details.year' => $year_param_int,
             'teams.team_season_details.tmID' => $tmID_param
         ]
     ],
-    ['$limit' => 1], 
-    // Ambil field yang dibutuhkan: detail tim dan seri playoff untuk tim tersebut pada tahun itu
+    ['$limit' => 1],
     [
         '$project' => [
             '_id' => 0,
             'team_details' => '$teams.team_season_details',
-            'playoff_series' => '$teams.playoff_series_for_team' // Ini array seri playoff yang disematkan
+            'playoff_series' => '$teams.playoff_series_for_team'
         ]
     ]
 ];
-
 $result = $coaches_collection->aggregate($pipelinePlayoff)->toArray();
 $teamAndPlayoffData = null;
 $teamDetail = null;
-$playoffDataForDisplay = []; // Ini akan berisi seri playoff
-$teamNameToDisplay = $tmID_param; // Default
+$playoffDataForDisplay = [];
+$teamNameToDisplay = $tmID_param;
 
 if (!empty($result)) {
     $teamAndPlayoffData = $result[0];
@@ -48,36 +49,44 @@ if (!empty($result)) {
 }
 
 if (!$teamDetail) {
-    die("Detail tim tidak ditemukan untuk ".htmlspecialchars($tmID_param)." musim ".htmlspecialchars($year_param).".");
+    die("Detail tim tidak ditemukan untuk ".htmlspecialchars($tmID_param)." musim yang dimulai ".htmlspecialchars($year_param).".");
 }
-
-function calculateWinPercentage($won, $lost, $games = null) { /* ... sama ... */ }
 
 // Siapkan data untuk chart playoff (jika ada)
 $playoffRoundsChart = [];
 $playoffWinsInRoundChart = [];
 if (!empty($playoffDataForDisplay)) {
+    // Sortir playoffDataForDisplay berdasarkan urutan round jika ada field urutan
+    // Contoh jika ada field 'roundOrder' atau jika nama round bisa diurutkan secara logis
+    // usort($playoffDataForDisplay, function($a, $b) {
+    //     $roundOrder = ['CFR' => 1, 'CSF' => 2, 'CF' => 3, 'F' => 4]; // Sesuaikan dengan nama round Anda
+    //     return ($roundOrder[$a['round']] ?? 99) <=> ($roundOrder[$b['round']] ?? 99);
+    // });
+
     foreach ($playoffDataForDisplay as $playoff_series) {
-        // Asumsi $playoff_series adalah objek tunggal dari array playoff_series_for_team
-        // Kita perlu menentukan apakah tim ini menang atau kalah dalam seri tersebut
         $isWinner = ($playoff_series['tmIDWinner'] ?? null) === $tmID_param;
-        $roundLabel = "Round " . ($playoff_series['round'] ?? 'N/A');
+        $roundLabel = ($playoff_series['round'] ?? 'N/A');
         
-        // Untuk chart, kita bisa fokus pada kemenangan tim ini per round
-        // Atau bisa juga W-L
-        if (!in_array($roundLabel, $playoffRoundsChart)) { // Hindari duplikasi round jika ada beberapa game dalam seri
-            $playoffRoundsChart[] = $roundLabel;
-            // Hitung kemenangan tim ini di seri tersebut
+        // Hanya tambahkan jika round belum ada untuk menghindari duplikasi jika data tidak terstruktur dengan baik
+        if (!in_array($roundLabel, array_column($playoffRoundsChart, 'label'))) { // Sedikit modifikasi untuk cek label
             $winsThisSeries = 0;
             if ($isWinner) {
                 $winsThisSeries = (int)($playoff_series['W'] ?? 0);
             } else {
-                // Jika kalah, lawannya menang sebanyak $playoff_series['W'], tim ini menang $playoff_series['L']
-                $winsThisSeries = (int)($playoff_series['L'] ?? 0); 
+                $winsThisSeries = (int)($playoff_series['L'] ?? 0); // Jika kalah, tim ini menang sejumlah L game
             }
-            $playoffWinsInRoundChart[] = $winsThisSeries;
+            $playoffRoundsChart[] = ['label' => $roundLabel, 'wins' => $winsThisSeries]; // Simpan sebagai objek
         }
     }
+    // Jika perlu urutan spesifik untuk chart dan data tidak terurut:
+    $roundOrderMap = ['CFR' => 1, 'CSF' => 2, 'CF' => 3, 'F' => 4]; // Sesuaikan
+    usort($playoffRoundsChart, function($a, $b) use ($roundOrderMap) {
+        return ($roundOrderMap[$a['label']] ?? 99) <=> ($roundOrderMap[$b['label']] ?? 99);
+    });
+    // Pisahkan lagi setelah diurutkan
+    $finalPlayoffLabels = array_column($playoffRoundsChart, 'label');
+    $finalPlayoffWins = array_column($playoffRoundsChart, 'wins');
+
 }
 ?>
 
@@ -86,36 +95,35 @@ if (!empty($playoffDataForDisplay)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detail Playoff Tim: <?= htmlspecialchars($teamNameToDisplay) ?> (<?= $year_param ?>)</title>
-    <!-- (Salin semua link CSS dan JS dari kode team_playoff.php lama Anda) -->
+    <title>Detail Playoff Tim: <?= htmlspecialchars($teamNameToDisplay) ?> (Musim <?= $display_season_year ?>)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Roboto+Condensed:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* (Salin style dari team_playoff.php lama Anda, sesuaikan jika perlu) */
-        body { font-family: 'Montserrat', sans-serif; background-color: #f0f9ff; /* Light blue */ color: #1e293b; padding-bottom: 2rem;}
+        body { font-family: 'Montserrat', sans-serif; background-color: #f0f9ff; color: #1e293b; padding-bottom: 2rem;}
         .font-condensed { font-family: 'Roboto Condensed', sans-serif; }
         .container { max-width: 900px; margin: 2rem auto; background-color: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); }
-        .header-title { color: #1e3a8a; /* Indigo-800 */ font-size: 2.25rem; margin-bottom: 0.5rem;}
-        .header-subtitle { color: #475569; /* Slate-600 */ font-size: 1.25rem; margin-bottom: 1.5rem; }
-        .stat-card-playoff { background-color: #e0f2fe; /* Light cyan */ border-radius: 0.75rem; padding: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .stat-label-playoff { color: #075985; /* Cyan-700 */ font-size: 0.875rem; }
-        .stat-value-playoff { color: #0c4a6e; /* Cyan-800 */ font-size: 1.5rem; font-weight: 700; }
-        .section-heading { font-family: 'Roboto Condensed', sans-serif; font-size: 1.5rem; font-weight: 700; color: #1e40af; /* Indigo-700 */ margin-bottom: 1rem; border-bottom: 2px solid #93c5fd; padding-bottom: 0.5rem;}
+        .header-title { color: #1e3a8a; font-size: 2.25rem; margin-bottom: 0.5rem;}
+        .header-subtitle { color: #475569; font-size: 1.25rem; margin-bottom: 1.5rem; }
+        .stat-card-playoff { background-color: #e0f2fe; border-radius: 0.75rem; padding: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .stat-label-playoff { color: #075985; font-size: 0.875rem; display: block; margin-bottom: 0.25rem;}
+        .stat-value-playoff { color: #0c4a6e; font-size: 1.5rem; font-weight: 700; }
+        .section-heading { font-family: 'Roboto Condensed', sans-serif; font-size: 1.5rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem; border-bottom: 2px solid #93c5fd; padding-bottom: 0.5rem;}
         .back-link { display: inline-block; margin-top: 2rem; padding: 0.625rem 1.25rem; background-color: #4f46e5; color: white; border-radius: 0.5rem; font-weight: 600; text-decoration: none; text-align: center; transition: background-color 0.3s ease; }
         .back-link:hover { background-color: #4338ca; }
+        .chart-container { background-color: #fff; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="text-center">
-            <a href="teams_stats.php<?= isset($_GET['team_season']) ? '?team_season=' . htmlspecialchars($_GET['team_season']) : '' ?>" 
+            <a href="teams_stats.php<?= isset($_GET['team_season']) ? '?team_season=' . htmlspecialchars($_GET['team_season']) : '' ?>"
                class="text-sm text-indigo-600 hover:text-indigo-700 hover:underline mb-4 inline-block">
                ← Kembali ke Performa Tim
             </a>
             <h1 class="header-title font-condensed"><?= htmlspecialchars($teamNameToDisplay) ?></h1>
-            <p class="header-subtitle">Detail Playoff Musim <?= htmlspecialchars($year_param) ?></p>
+            <p class="header-subtitle">Detail Playoff Musim <?= $display_season_year // Tampilkan TAHUN AKHIR MUSIM ?></p>
         </div>
 
         <?php if ($teamDetail): ?>
@@ -134,67 +142,71 @@ if (!empty($playoffDataForDisplay)) {
                     <table class="min-w-full table-auto text-sm">
                         <thead class="bg-slate-100">
                             <tr class="text-left text-xs text-slate-600 uppercase tracking-wider">
-                                <th class="px-4 py-2">Round</th>
-                                <th class="px-4 py-2">Lawan</th>
-                                <th class="px-4 py-2">Hasil (Tim Ini)</th>
-                                <th class="px-4 py-2">Skor Seri (W-L)</th>
+                                <th class="px-4 py-3">Round</th>
+                                <th class="px-4 py-3">Lawan</th>
+                                <th class="px-4 py-3">Hasil (Tim Ini)</th>
+                                <th class="px-4 py-3">Skor Seri (W-L)</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200">
+                            <?php
+                                // Sortir $playoffDataForDisplay sebelum ditampilkan di tabel jika perlu
+                                // usort($playoffDataForDisplay, function($a, $b) use ($roundOrderMap) {
+                                //    return ($roundOrderMap[$a['round']] ?? 99) <=> ($roundOrderMap[$b['round']] ?? 99);
+                                // });
+                            ?>
                             <?php foreach ($playoffDataForDisplay as $series): ?>
                                 <?php
                                 $isThisTeamWinner = ($series['tmIDWinner'] ?? null) === $tmID_param;
                                 $opponentTeamID = $isThisTeamWinner ? ($series['tmIDLoser'] ?? 'N/A') : ($series['tmIDWinner'] ?? 'N/A');
-                                // Anda mungkin perlu lookup nama tim lawan jika tmID tidak cukup
-                                $opponentName = $opponentTeamID; // Placeholder, idealnya lookup nama
-                                
+                                $opponentName = $opponentTeamID; // Idealnya lookup nama tim
                                 $resultText = $isThisTeamWinner ? "Menang" : "Kalah";
                                 $seriesScore = $isThisTeamWinner ? (($series['W'] ?? 0) . " - " . ($series['L'] ?? 0)) : (($series['L'] ?? 0) . " - " . ($series['W'] ?? 0));
                                 ?>
                                 <tr class="hover:bg-slate-50">
-                                    <td class="px-4 py-2 whitespace-nowrap"><?= htmlspecialchars($series['round'] ?? '-') ?></td>
-                                    <td class="px-4 py-2 whitespace-nowrap"><?= htmlspecialchars($opponentName) ?></td>
-                                    <td class="px-4 py-2 whitespace-nowrap font-semibold <?= $isThisTeamWinner ? 'text-green-600' : 'text-red-600' ?>">
+                                    <td class="px-4 py-3 whitespace-nowrap"><?= htmlspecialchars($series['round'] ?? '-') ?></td>
+                                    <td class="px-4 py-3 whitespace-nowrap"><?= htmlspecialchars($opponentName) ?></td>
+                                    <td class="px-4 py-3 whitespace-nowrap font-semibold <?= $isThisTeamWinner ? 'text-green-600' : 'text-red-600' ?>">
                                         <?= $resultText ?>
                                     </td>
-                                    <td class="px-4 py-2 whitespace-nowrap"><?= htmlspecialchars($seriesScore) ?></td>
+                                    <td class="px-4 py-3 whitespace-nowrap"><?= htmlspecialchars($seriesScore) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
             </section>
-            
-            <?php if (!empty($playoffRoundsChart)): ?>
-            <section class="chart-container min-h-[300px] md:min-h-[350px]">
-                <h3 class="text-lg font-semibold mb-3 text-slate-700 text-center">Grafik Kemenangan Tim per Babak Playoff</h3>
+
+            <?php if (!empty($finalPlayoffLabels)): // Menggunakan variabel baru untuk chart ?>
+            <section class="chart-container min-h-[300px] md:min-h-[350px] mt-8">
+                <h3 class="text-lg font-semibold mb-4 text-slate-700 text-center">Grafik Kemenangan Tim per Babak Playoff</h3>
                 <canvas id="playoffRoundWinsChart"></canvas>
             </section>
             <?php endif; ?>
 
         <?php else: ?>
-            <div class="text-center py-8 bg-white rounded-md shadow">
-                <i class="fas fa-info-circle fa-3x text-slate-400 mb-3"></i>
-                <p class="text-slate-600">
-                    <?php 
-                    if ($teamDetail && ($teamDetail['playoff'] === 'Y' || $teamDetail['playoff'] !== '-')) {
-                        echo 'Tidak ada detail pertandingan playoff yang ditemukan untuk tim ini pada musim data ' . htmlspecialchars($year_param) . '.';
+            <div class="text-center py-10 bg-white rounded-md shadow">
+                <i class="fas fa-info-circle fa-3x text-slate-400 mb-4"></i>
+                <p class="text-slate-600 text-lg">
+                    <?php
+                    if ($teamDetail && ($teamDetail['playoff'] === 'Y' || stripos($teamDetail['playoff'], 'Won') !== false || stripos($teamDetail['playoff'], 'Lost') !== false )) {
+                        echo 'Tidak ada detail pertandingan seri playoff yang ditemukan untuk tim ini pada musim ' . $display_season_year . '.';
                     } else {
-                        echo 'Tim tidak lolos playoff pada musim ' . htmlspecialchars($year_param) . '.';
+                        echo 'Tim tidak lolos playoff pada musim ' . $display_season_year . '.';
                     }
                     ?>
                 </p>
             </div>
         <?php endif; ?>
-        
-        <div class="text-center">
+
+        <div class="text-center mt-8">
             <a href="teams_stats.php<?= isset($_GET['team_season']) ? '?team_season=' . htmlspecialchars($_GET['team_season']) : '' ?>" class="back-link">
                 Kembali
             </a>
         </div>
     </div>
 
-    <?php if (!empty($playoffRoundsChart)): ?>
+    <?php if (!empty($finalPlayoffLabels)): // Menggunakan variabel baru untuk chart ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const ctxPlayoff = document.getElementById('playoffRoundWinsChart')?.getContext('2d');
@@ -202,20 +214,37 @@ if (!empty($playoffDataForDisplay)) {
                 new Chart(ctxPlayoff, {
                     type: 'bar',
                     data: {
-                        labels: <?= json_encode($playoffRoundsChart) ?>,
+                        labels: <?= json_encode($finalPlayoffLabels) ?>,
                         datasets: [{
                             label: 'Kemenangan Tim Ini di Babak',
-                            data: <?= json_encode($playoffWinsInRoundChart) ?>,
-                            backgroundColor: 'rgba(79, 70, 229, 0.7)', // Indigo
+                            data: <?= json_encode($finalPlayoffWins) ?>,
+                            backgroundColor: 'rgba(79, 70, 229, 0.7)', 
                             borderColor: 'rgba(79, 70, 229, 1)',
                             borderWidth: 1,
-                            borderRadius: 4
+                            borderRadius: {topLeft: 4, topRight: 4}
                         }]
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                        indexAxis: <?= count($finalPlayoffLabels) > 4 ? "'y'" : "'x'" ?>,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) { label += ': '; }
+                                        const value = context.parsed.y !== null ? context.parsed.y : context.parsed.x;
+                                        label += value + ' kemenangan';
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                            x: { ticks: { /* autoSkip: false, maxRotation: 45, minRotation: 45 */ } }
+                        }
                     }
                 });
             }
