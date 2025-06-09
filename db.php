@@ -5,7 +5,8 @@ $mongoConnectionString = "mongodb://mongo:mongo@localhost:27017";
 $databaseName = "nba_projek";
 
 try {
-    $client = new MongoDB\Client();
+    // $client = new MongoDB\Client();
+    $client = new MongoDB\Client("mongodb://mongo:mongo@localhost:27017");
     $db = $client->selectDatabase($databaseName);
 
     // Koleksi yang akan kita gunakan:
