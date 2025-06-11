@@ -1,62 +1,88 @@
 <!DOCTYPE html>
+<!-- 
+    CATATAN: Idealnya, file header.php hanya berisi <nav>...</nav>.
+    Namun, untuk memudahkan dan agar sesuai dengan struktur file Anda yang lain,
+    saya sertakan struktur HTML lengkap di sini. Pastikan file lain yang
+    meng-include header ini tidak memiliki duplikasi tag <html>, <head>, atau <body>.
+
+    Jika file lain (seperti index.php) sudah memiliki tag-tag tersebut,
+    maka Anda cukup menyalin bagian <nav>...</nav> saja ke dalam file header.php.
+-->
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teams Stats - NBA Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;400&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Montserrat', sans-serif; }
-        .stat-card {
-            transition: transform 0.15s;
-        }
-        .stat-card:hover {
-            transform: translateY(-4px) scale(1.03);
-            box-shadow: 0 8px 24px 0 rgba(16,185,129,0.15);
-        }
-        .table-scroll {
-            max-height: 420px;
-            overflow-y: auto;
-        }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: #bbf7d0; border-radius: 4px; }
+    <!-- Script dan Link yang dibutuhkan di semua halaman -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Rajdhani:wght@600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-        body { font-family: 'Montserrat', sans-serif; }
-        .hero-bg {
-            background: linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%);
+    <!-- Anda bisa menambahkan title default di sini, tapi lebih baik di-set di setiap halaman -->
+    <!-- <title>NBA Universe Dashboard</title> -->
+
+    <style>
+        /* Style dasar untuk konsistensi */
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #0A0A14;
+            color: #E0E0E0;
         }
-        .card {
-            transition: transform 0.15s;
+
+        .font-teko {
+            font-family: 'Teko', sans-serif;
         }
-        .card:hover {
-            transform: translateY(-6px) scale(1.03);
-            box-shadow: 0 8px 24px 0 rgba(59,130,246,0.15);
-        }
-        .pulse {
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+
+        .font-rajdhani {
+            font-family: 'Rajdhani', sans-serif;
         }
     </style>
 </head>
+
 <body>
 
-    <nav class="bg-white shadow p-4 flex justify-between items-center sticky top-0 z-50">
-        <div class="flex items-center gap-2">
-            <img src="image/nba.png" alt="NBA" class="h-8">
-            <h1 class="text-2xl font-extrabold text-blue-700 tracking-tight drop-shadow">NBA Player Dashboard</h1>
+    <nav class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 shadow-lg p-4 flex justify-between items-center sticky top-0 z-50">
+        <!-- Logo di Kiri -->
+        <a href="index.php" class="flex items-center gap-3">
+            <img src="https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg" alt="NBA Universe Logo" class="h-10">
+        </a>
+
+        <!-- Link Navigasi di Kanan (untuk layar medium ke atas) -->
+        <div class="hidden md:flex items-center space-x-6">
+            <a href="index.php" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Home</a>
+            <a href="player_stats.php" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Player Stats</a>
+            <a href="teams_stats.php" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Team Stats</a>
+
+            <!-- === LINK BARU YANG DITAMBAHKAN === -->
+            <a href="awards_stats.php" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Awards</a>
+
+            <a href="search_page.php" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Search</a>
         </div>
-        <div class="space-x-4">
-            <a href="index.php" class="text-gray-700 hover:text-blue-500 font-semibold">Home</a>
-            <a href="player_stats.php" class="text-gray-700 hover:text-blue-500 font-semibold">Player Stats</a>
-            <a href="teams_stats.php" class="text-gray-700 hover:text-blue-500 font-semibold">Team Stats</a>
-            <a href="search_page.php" class="text-gray-700 hover:text-blue-500 font-semibold">Search</a>
+
+        <!-- Tombol Menu Mobile (untuk layar kecil) -->
+        <div class="md:hidden">
+            <button id="mobile-menu-button" class="text-gray-300 hover:text-white focus:outline-none">
+                <i class="fas fa-bars fa-lg"></i>
+            </button>
         </div>
     </nav>
-    
-</body>
-</html>
+
+    <!-- Menu Mobile (awalnya tersembunyi) -->
+    <div id="mobile-menu" class="hidden md:hidden bg-gray-900 p-4">
+        <a href="index.php" class="block text-gray-300 hover:text-white py-2">Home</a>
+        <a href="player_stats.php" class="block text-gray-300 hover:text-white py-2">Player Stats</a>
+        <a href="teams_stats.php" class="block text-gray-300 hover:text-white py-2">Team Stats</a>
+        <a href="awards_stats.php" class="block text-gray-300 hover:text-white py-2">Awards</a>
+        <a href="search_page.php" class="block text-gray-300 hover:text-white py-2">Search</a>
+    </div>
+
+    <script>
+        // Script sederhana untuk toggle menu mobile
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            var menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+    </script>
+
+    <!-- Tag penutup </body> dan </html> JANGAN diletakkan di sini,
+     tetapi di akhir setiap file utama (index.php, player_stats.php, dll) -->
