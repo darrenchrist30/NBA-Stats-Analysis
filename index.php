@@ -35,6 +35,7 @@ include 'header.php';
         }
 
         .hero-section-static {
+            /* height: 100vh; */
             height: 100vh;
             position: relative;
             display: flex;
@@ -42,12 +43,24 @@ include 'header.php';
             align-items: center;
             justify-content: center;
             text-align: center;
-            background-image: url('image/hero-nba-universe.png');
+            /* background-image: url('image/hero-nba-universe.png'); */
             background-size: cover;
             background-position: center center;
             background-repeat: no-repeat;
             padding: 20px;
             padding-bottom: 6rem;
+            overflow: hidden;
+        }
+
+        .hero-video-background {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ini kunci agar video menutupi area tanpa distorsi */
+            transform: translate(-50%, -50%);
+            z-index: 0; /* Pastikan video berada di paling belakang */
         }
 
         .hero-section-static::before {
@@ -57,7 +70,7 @@ include 'header.php';
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(to bottom, rgba(10, 10, 20, 0.3) 0%, rgba(10, 10, 20, 0.7) 100%);
+            background: linear-gradient(to bottom, rgba(10, 10, 20, 0.3) 0%, rgba(10, 10, 20, 0.8) 100%);
             z-index: 1;
         }
 
@@ -394,6 +407,10 @@ include 'header.php';
 
 <body class="text-gray-200">
     <section class="hero-section-static">
+        <video autoplay loop muted playsinline class="hero-video-background">
+            <source src="videos/dunk.mp4" type="video/mp4">
+            Browser Anda tidak mendukung tag video.
+        </video>
         <div class="hero-content-static"> <img src="https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg" alt="NBA Logo" class="hero-nba-logo mx-auto scroll-reveal">
             <h1 class="hero-title-text font-teko scroll-reveal stagger-delay-1">NBA UNIVERSE</h1>
             <p class="hero-subtitle-text scroll-reveal stagger-delay-2"> Dive into the world of NBA statistics. Explore player performances, team dynamics, and iconic moments. </p> <a href="#about-nba-section" class="hero-cta-button scroll-reveal stagger-delay-3"> Discover the League </a>
