@@ -47,6 +47,7 @@ include 'header.php';
             background-position: center center;
             background-repeat: no-repeat;
             padding: 20px;
+            padding-bottom: 6rem;
         }
 
         .hero-section-static::before {
@@ -66,37 +67,37 @@ include 'header.php';
         }
 
         .hero-nba-logo {
-            width: clamp(100px, 20vw, 180px);
+            width: clamp(200px, 30vw, 250px);
             margin-bottom: 1.5rem;
         }
 
         .hero-title-text {
-            font-size: clamp(2.8rem, 8vw, 5.5rem);
-            line-height: 1.05;
+            font-size: clamp(6rem, 15vw, 9rem);
+            line-height: 1;
             font-weight: 700;
             color: white;
-            text-shadow: 0px 2px 15px rgba(0, 0, 0, 0.6);
+            text-shadow: 0px 4px 20px rgba(0, 0, 0, 0.7);
             letter-spacing: 0.01em;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .hero-subtitle-text {
-            font-size: clamp(0.9rem, 2.5vw, 1.25rem);
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
             color: #d1d5db;
-            max-width: 600px;
+            max-width: 650px;
             margin-left: auto;
             margin-right: auto;
-            margin-bottom: 2.5rem;
+            margin-bottom: 3rem;
             line-height: 1.6;
         }
 
         .hero-cta-button {
             background-color: #1D4ED8;
             color: white;
-            padding: 0.85rem 2.25rem;
+            padding: 1rem 2.5rem;
             border-radius: 0.5rem;
             font-weight: 700;
-            font-size: clamp(1rem, 3vw, 1.125rem);
+            font-size: clamp(1rem, 3vw, 1.25rem);
             box-shadow: 0 4px 20px rgba(29, 78, 216, 0.5);
             transition: all 0.3s ease;
             text-transform: uppercase;
