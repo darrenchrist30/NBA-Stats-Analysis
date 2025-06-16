@@ -31,12 +31,35 @@ if (!empty($resultTeam)) {
     $teamData = $resultTeam[0];
     $teamNameToDisplay = $teamData['name'] ?? $tmID_param;
 
-    // Add percentage calculations to $teamData for summary display (New Addition)
+    $totalGames = ($teamData['won'] ?? 0) + ($teamData['lost'] ?? 0);
+    if ($totalGames > ($teamData['games'] ?? 0)) {
+        $teamData['games'] = $totalGames;
+    }
+
+
     $teamData['o_fgp'] = (isset($teamData['o_fga']) && $teamData['o_fga'] > 0) ? round(($teamData['o_fgm'] / $teamData['o_fga']) * 100, 1) : 0;
     $teamData['o_3pp'] = (isset($teamData['o_3pa']) && $teamData['o_3pa'] > 0) ? round(($teamData['o_3pm'] / $teamData['o_3pa']) * 100, 1) : 0;
     $teamData['o_ftp'] = (isset($teamData['o_fta']) && $teamData['o_fta'] > 0) ? round(($teamData['o_ftm'] / $teamData['o_fta']) * 100, 1) : 0;
     $teamData['d_fgp'] = (isset($teamData['d_fga']) && $teamData['d_fga'] > 0) ? round(($teamData['d_fgm'] / $teamData['d_fga']) * 100, 1) : 0; // Opponent FG%
     $teamData['d_3pp'] = (isset($teamData['d_3pa']) && $teamData['d_3pa'] > 0) ? round(($teamData['d_3pm'] / $teamData['d_3pa']) * 100, 1) : 0; // Opponent 3P%
+    
+    // BARU: Kalkulasi statistik rata-rata per game (PPG, RPG, APG, dll.)
+    if (isset($teamData['games']) && $teamData['games'] > 0) {
+        $games = $teamData['games'];
+        // Rata-rata Ofensif per game
+        $teamData['avg_o_pts'] = round(($teamData['o_pts'] ?? 0) / $games, 1);
+        $teamData['avg_o_reb'] = round(($teamData['o_reb'] ?? 0) / $games, 1);
+        $teamData['avg_o_asts'] = round(($teamData['o_asts'] ?? 0) / $games, 1);
+        $teamData['avg_o_stl'] = round(($teamData['o_stl'] ?? 0) / $games, 1);
+        $teamData['avg_o_blk'] = round(($teamData['o_blk'] ?? 0) / $games, 1);
+        $teamData['avg_o_to'] = round(($teamData['o_to'] ?? 0) / $games, 1);
+
+        // Rata-rata Defensif per game (statistik lawan)
+        $teamData['avg_d_pts'] = round(($teamData['d_pts'] ?? 0) / $games, 1);
+        $teamData['avg_d_reb'] = round(($teamData['d_reb'] ?? 0) / $games, 1);
+        $teamData['avg_d_asts'] = round(($teamData['d_asts'] ?? 0) / $games, 1);
+    }
+    // --- AKHIR MODIFIKASI ---
 }
 
 if (!$teamData) {
@@ -48,25 +71,20 @@ $coachesForThisTeamSeason = [];
 // This assumes your 'coaches_collection' documents are structured with coach details at the root
 // and they have a 'teams.team_season_details' array that links them to specific team seasons.
 // Adjust if your schema for linking coaches to team seasons is different.
+// 1.5. Ambil data pelatih untuk tim dan musim ini (New Addition)
+$coachesForThisTeamSeason = [];
 $pipelineCoachesList = [
     ['$unwind' => '$teams'],
     ['$unwind' => '$teams.team_season_details'],
     ['$match' => [
         'teams.team_season_details.year' => $year_param_int,
         'teams.team_season_details.tmID' => $tmID_param
-        // Consider adding a filter here if coaches are not directly in 'teams' but linked by coachID
-        // e.g., 'teams.team_season_details.coachID' => ['$exists' => true]
     ]],
-    ['$project' => [ // Project fields from the root document (the coach document)
-        '_id' => 0,
-        'coachID' => 1, // Assuming coachID is at the root of the coach document
-        'firstName' => 1, // Assuming firstName is at the root
-        'lastName' => 1,  // Assuming lastName is at the root
+    ['$project' => [
+        '_id' => 0, 'coachID' => 1, 'firstName' => 1, 'lastName' => 1,
     ]],
-    ['$group' => [ // Group by coach to avoid duplicates if a coach has multiple 'stints' or entries that match
-        '_id' => '$coachID',
-        'firstName' => ['$first' => '$firstName'],
-        'lastName' => ['$first' => '$lastName']
+    ['$group' => [
+        '_id' => '$coachID', 'firstName' => ['$first' => '$firstName'], 'lastName' => ['$first' => '$lastName']
     ]]
 ];
 $coachesResult = $coaches_collection->aggregate($pipelineCoachesList)->toArray();
@@ -74,13 +92,13 @@ if (!empty($coachesResult)) {
     foreach ($coachesResult as $coach) {
         $coachesForThisTeamSeason[] = [
             'name' => trim(($coach['firstName'] ?? '') . ' ' . ($coach['lastName'] ?? '')),
-            'id' => $coach['_id'] ?? 'N/A' // Use _id from group stage which is coachID
+            'id' => $coach['_id'] ?? 'N/A'
         ];
     }
 }
 
 
-// 2. Ambil Rata-Rata Liga/Semua Tim untuk Musim yang Sama (User's Original Logic)
+// 2. Ambil Rata-Rata Liga/Semua Tim untuk Musim yang Sama
 $leagueAverageStats = null;
 $avgPipeline = [
     ['$unwind' => '$teams'],
@@ -107,9 +125,6 @@ $avgPipeline = [
         'avg_d_3pa' => ['$avg' => '$teams.team_season_details.d_3pa'],
         'avg_d_reb' => ['$avg' => '$teams.team_season_details.d_reb'],
         'avg_d_asts' => ['$avg' => '$teams.team_season_details.d_asts'],
-        'avg_d_stl' => ['$avg' => '$teams.team_season_details.d_stl'],
-        'avg_d_blk' => ['$avg' => '$teams.team_season_details.d_blk'],
-        'avg_d_to' => ['$avg' => '$teams.team_season_details.d_to'],
         'count' => ['$sum' => 1]
     ]]
 ];
@@ -229,42 +244,54 @@ if ($teamData && $leagueAverageStats) {
         ]
     ];
 }
-// ----------------------------------------------
 
-// Data untuk Chart Perbandingan (Bar Chart) - (User's Original Logic for data values)
-$comparisonChartData = null;
-if ($teamData && $leagueAverageStats) {
-    $comparisonChartData = [
-        'labels' => ['Points Scored', 'Rebounds', 'Assists', 'Steals', 'Blocks', 'Turnovers (Lower Better)', 'Points Allowed (Lower Better)'],
+$historicalRankData = null;
+$pipelineRankHistory = [
+    ['$unwind' => '$teams'],
+    ['$unwind' => '$teams.team_season_details'],
+    ['$match' => [
+        'teams.team_season_details.tmID' => $tmID_param,
+        'teams.team_season_details.year' => ['$gte' => 1979]
+    ]],
+    ['$sort' => ['teams.team_season_details.year' => 1, 'teams.team_season_details.stint' => 1]],
+    ['$group' => [
+        '_id' => '$teams.team_season_details.year',
+        'finalRank' => ['$last' => '$teams.team_season_details.confRank'] 
+    ]],
+    ['$sort' => ['_id' => 1]],
+    ['$project' => [
+        '_id' => 0,
+        'year' => '$_id',
+        'confRank' => '$finalRank'
+    ]]
+];
+$rankHistoryResult = $coaches_collection->aggregate($pipelineRankHistory)->toArray();
+
+if (!empty($rankHistoryResult)) {
+    $labels = [];
+    $data = [];
+    foreach ($rankHistoryResult as $record) {
+        $labels[] = $record['year'];
+        $data[] = isset($record['confRank']) ? (int)$record['confRank'] : null; 
+    }
+    $historicalRankData = [
+        'labels' => $labels,
         'datasets' => [
             [
-                'label' => htmlspecialchars($teamNameToDisplay) . ' (' . $year_param . ')',
-                'data' => [
-                    $teamData['o_pts'] ?? 0, $teamData['o_reb'] ?? 0, $teamData['o_asts'] ?? 0,
-                    $teamData['o_stl'] ?? 0, $teamData['o_blk'] ?? 0,
-                    ($teamData['o_to'] ?? 0) * -1, ($teamData['d_pts'] ?? 0) * -1,
-                ],
-                // Using new dark-theme friendly colors
-                'backgroundColor' => 'rgba(99, 102, 241, 0.7)', // Indigo-500 (adjusted for better visibility)
-                'borderColor' => 'rgba(99, 102, 241, 1)', 
-                'borderWidth' => 1
-            ],
-            [
-                'label' => 'Rata-Rata Liga (' . $year_param . ')',
-                'data' => [
-                    round($leagueAverageStats['avg_o_pts'] ?? 0, 1), round($leagueAverageStats['avg_o_reb'] ?? 0, 1),
-                    round($leagueAverageStats['avg_o_asts'] ?? 0, 1), round($leagueAverageStats['avg_o_stl'] ?? 0, 1),
-                    round($leagueAverageStats['avg_o_blk'] ?? 0, 1), round(($leagueAverageStats['avg_o_to'] ?? 0) * -1, 1),
-                    round(($leagueAverageStats['avg_d_pts'] ?? 0) * -1, 1),
-                ],
-                 // Using new dark-theme friendly colors
-                'backgroundColor' => 'rgba(107, 114, 128, 0.6)', // Gray-500
-                'borderColor' => 'rgba(107, 114, 128, 1)', 
-                'borderWidth' => 1
+                'label' => 'Peringkat Divisi',
+                'data' => $data,
+                'fill' => true,
+                'borderColor' => 'rgba(99, 102, 241, 1)',
+                'backgroundColor' => 'rgba(99, 102, 241, 0.2)',
+                'tension' => 0.3,
+                'pointBackgroundColor' => 'rgba(99, 102, 241, 1)',
+                'pointRadius' => 4,
+                'pointHoverRadius' => 7
             ]
         ]
     ];
 }
+
 
 // Prepare back link (New Addition)
 $back_to_dashboard_link = 'teams_stats.php';
@@ -346,25 +373,38 @@ if ($team_season_filter_value_from_dashboard) {
                 </div>
 
                 <div class="stats-display-grid mt-4">
-                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-flag mr-2 text-indigo-400"></i>Liga</span><span class="value"><?= htmlspecialchars($teamData['lgID'] ?? '-') ?></span></div>
-                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-users mr-2 text-indigo-400"></i>Tim</span><span class="value"><?= htmlspecialchars($teamData['name'] ?? '-') ?> (<?= htmlspecialchars($teamData['tmID'] ?? '-') ?>)</span></div>
-                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-sitemap mr-2 text-indigo-400"></i>Divisi</span><span class="value"><?= htmlspecialchars($teamData['divID'] ?? '-') ?> (Peringkat: <?= htmlspecialchars($teamData['rank'] ?? '-') ?>)</span></div>
-                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-layer-group mr-2 text-indigo-400"></i>Konferensi</span><span class="value"><?= htmlspecialchars($teamData['confID'] ?? '-') ?> (Peringkat: <?= htmlspecialchars($teamData['confRank'] ?? '-') ?>)</span></div>
-                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-medal mr-2 text-yellow-400"></i>Playoff</span><span class="value"><?= htmlspecialchars($teamData['playoff'] ?? 'N/A') ?></span></div>
-                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-basketball-ball mr-2 text-orange-400"></i>Total Game</span><span class="value"><?= htmlspecialchars($teamData['games'] ?? '-') ?></span></div>
-                    
-                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-plus-circle mr-2 text-blue-400"></i>Menang</span><span class="value value-green"><?= htmlspecialchars($teamData['won'] ?? '-') ?></span></div>
-                    <div class="stat-display-item defensive-border"><span class="label"><i class="fas fa-minus-circle mr-2 text-red-400"></i>Kalah</span><span class="value value-red"><?= htmlspecialchars($teamData['lost'] ?? '-') ?></span></div>
-                    
-                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-bullseye mr-2 text-blue-400"></i>Off. FG%</span><span class="value"><?= htmlspecialchars($teamData['o_fgp'] ?? '0') ?>%</span></div>
-                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-bullseye mr-2 text-blue-400"></i>Off. 3P%</span><span class="value"><?= htmlspecialchars($teamData['o_3pp'] ?? '0') ?>%</span></div>
-                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-bullseye mr-2 text-blue-400"></i>Off. FT%</span><span class="value"><?= htmlspecialchars($teamData['o_ftp'] ?? '0') ?>%</span></div>
-                    
-                    <div class="stat-display-item defensive-border"><span class="label"><i class="fas fa-shield-alt mr-2 text-red-400"></i>Opp. FG%</span><span class="value value-red"><?= htmlspecialchars($teamData['d_fgp'] ?? '0') ?>%</span></div>
-                    <div class="stat-display-item defensive-border"><span class="label"><i class="fas fa-shield-alt mr-2 text-red-400"></i>Opp. 3P%</span><span class="value value-red"><?= htmlspecialchars($teamData['d_3pp'] ?? '0') ?>%</span></div>
+                    <!-- Info Umum -->
+                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-flag text-indigo-300"></i>Liga</span><span class="value"><?= htmlspecialchars($teamData['lgID'] ?? '-') ?></span></div>
+                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-users text-indigo-300"></i>Tim</span><span class="value"><?= htmlspecialchars($teamData['name'] ?? '-') ?></span></div>
+                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-sitemap text-indigo-300"></i>Divisi</span><span class="value"><?= htmlspecialchars($teamData['divID'] ?? '-') ?> (Peringkat: <?= htmlspecialchars($teamData['rank'] ?? '-') ?>)</span></div>
+                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-layer-group text-indigo-300"></i>Konferensi</span><span class="value"><?= htmlspecialchars($teamData['confID'] ?? '-') ?> (Peringkat: <?= htmlspecialchars($teamData['confRank'] ?? '-') ?>)</span></div>
+                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-landmark text-gray-400"></i>Arena</span><span class="value"><?= htmlspecialchars($teamData['arena'] ?? '-') ?></span></div>
+                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-users-cog text-gray-400"></i>Penonton</span><span class="value"><?= number_format($teamData['attendance'] ?? 0) ?></span></div>
 
-                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-landmark mr-2 text-gray-400"></i>Arena</span><span class="value"><?= htmlspecialchars($teamData['arena'] ?? '-') ?></span></div>
-                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-users-cog mr-2 text-gray-400"></i>Penonton</span><span class="value"><?= number_format($teamData['attendance'] ?? 0) ?></span></div>
+                    <!-- Rekor Tim -->
+                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-medal text-yellow-400"></i>Hasil Playoff</span><span class="value"><?= htmlspecialchars($teamData['playoff'] ?? 'N/A') ?></span></div>
+                    <div class="stat-display-item neutral-border"><span class="label"><i class="fas fa-basketball-ball text-orange-400"></i>Total Game</span><span class="value"><?= htmlspecialchars($teamData['games'] ?? '0') ?></span></div>
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-plus-circle text-blue-400"></i>Menang</span><span class="value value-green"><?= htmlspecialchars($teamData['won'] ?? '-') ?></span></div>
+                    <div class="stat-display-item defensive-border"><span class="label"><i class="fas fa-minus-circle text-red-400"></i>Kalah</span><span class="value value-red"><?= htmlspecialchars($teamData['lost'] ?? '-') ?></span></div>
+                    
+                    <!-- Persentase Shooting -->
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-bullseye text-blue-400"></i>Off. FG%</span><span class="value"><?= htmlspecialchars($teamData['o_fgp'] ?? '0') ?>%</span></div>
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-bullseye text-blue-400"></i>Off. 3P%</span><span class="value"><?= htmlspecialchars($teamData['o_3pp'] ?? '0') ?>%</span></div>
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-bullseye text-blue-400"></i>Off. FT%</span><span class="value"><?= htmlspecialchars($teamData['o_ftp'] ?? '0') ?>%</span></div>
+                    <div class="stat-display-item defensive-border"><span class="label"><i class="fas fa-shield-alt text-red-400"></i>Opp. FG%</span><span class="value value-red"><?= htmlspecialchars($teamData['d_fgp'] ?? '0') ?>%</span></div>
+                    
+                    <!-- Rata-rata Ofensif per Game -->
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-star text-blue-400"></i>Points (PPG)</span><span class="value"><?= htmlspecialchars($teamData['avg_o_pts'] ?? '0') ?></span></div>
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-people-arrows text-blue-400"></i>Assists (APG)</span><span class="value"><?= htmlspecialchars($teamData['avg_o_asts'] ?? '0') ?></span></div>
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-hand-lizard text-blue-400"></i>Rebounds (RPG)</span><span class="value"><?= htmlspecialchars($teamData['avg_o_reb'] ?? '0') ?></span></div>
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-hand-sparkles text-blue-400"></i>Steals (SPG)</span><span class="value"><?= htmlspecialchars($teamData['avg_o_stl'] ?? '0') ?></span></div>
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-hand-paper text-blue-400"></i>Blocks (BPG)</span><span class="value"><?= htmlspecialchars($teamData['avg_o_blk'] ?? '0') ?></span></div>
+                    <div class="stat-display-item offensive-border"><span class="label"><i class="fas fa-exclamation-triangle text-yellow-400"></i>Turnovers (TPG)</span><span class="value"><?= htmlspecialchars($teamData['avg_o_to'] ?? '0') ?></span></div>
+                    
+                    <!-- Rata-rata Defensif per Game -->
+                    <div class="stat-display-item defensive-border"><span class="label"><i class="fas fa-star-half-alt text-red-400"></i>Opp. Points (PPG)</span><span class="value value-red"><?= htmlspecialchars($teamData['avg_d_pts'] ?? '0') ?></span></div>
+                    <div class="stat-display-item defensive-border"><span class="label"><i class="fas fa-people-arrows text-red-400"></i>Opp. Assists (APG)</span><span class="value value-red"><?= htmlspecialchars($teamData['avg_d_asts'] ?? '0') ?></span></div>
+                    <div class="stat-display-item defensive-border"><span class="label"><i class="fas fa-hand-lizard text-red-400"></i>Opp. Rebounds (RPG)</span><span class="value value-red"><?= htmlspecialchars($teamData['avg_d_reb'] ?? '0') ?></span></div>
                 </div>
             </section>
 
@@ -412,31 +452,24 @@ if ($team_season_filter_value_from_dashboard) {
             </div>
 
 
-            <?php if ($comparisonChartData): ?>
+            <!-- MODIFIKASI: Mengganti Chart Perbandingan Umum dengan Chart Peringkat Historis -->
+            <?php if ($historicalRankData): ?>
             <section class="mb-8">
-                <h2 class="section-title"><i class="fas fa-balance-scale mr-2"></i>Perbandingan Umum dengan Rata-Rata Liga</h2>
+                <h2 class="section-title"><i class="fas fa-chart-area mr-2"></i>Performa Peringkat Tim (Sejak 1979)</h2>
                 <div class="chart-wrapper mt-4 min-h-[450px] lg:min-h-[500px]">
-                    <canvas id="teamComparisonChart"></canvas>
+                    <canvas id="historicalRankChart"></canvas>
                 </div>
             </section>
             <?php else: ?>
-                 <?php if($teamData): // Only show this if teamData itself exists, but league average is missing ?>
-                <p class="text-center text-gray-500 my-8 bg-gray-700 p-6 rounded-md shadow-md">Data rata-rata liga tidak tersedia untuk perbandingan umum pada musim ini.</p>
-                <?php endif; ?>
+                <p class="text-center text-gray-500 my-8 bg-gray-700 p-6 rounded-md shadow-md">Data peringkat historis tidak tersedia untuk tim ini.</p>
             <?php endif; ?>
 
         <?php else: ?>
-            <div class="text-center text-red-400 mt-10 py-10 bg-gray-700 rounded-lg shadow-lg">
-                <i class="fas fa-exclamation-triangle fa-3x mb-4"></i>
-                <p class="text-xl">Data detail tim tidak ditemukan.</p>
-                <p class="text-gray-400">Mohon periksa kembali parameter yang diberikan atau coba lagi nanti.</p>
-            </div>
+            <div class="text-center text-red-400 mt-10 py-10 bg-gray-700 rounded-lg shadow-lg">...</div>
         <?php endif; ?>
 
         <div class="text-center mt-12">
-            <a href="<?= htmlspecialchars($back_to_dashboard_link) ?>" class="action-button back-link text-base">
-                <i class="fas fa-arrow-left"></i>Kembali ke Dashboard Tim
-            </a>
+            <a href="<?= htmlspecialchars($back_to_dashboard_link) ?>" class="action-button back-link text-base"><i class="fas fa-arrow-left"></i>Kembali ke Dashboard Tim</a>
         </div>
     </div>
 
@@ -446,6 +479,7 @@ if ($team_season_filter_value_from_dashboard) {
     const comparisonChartDataJS = <?= json_encode($comparisonChartData ?? null) ?>;
     const offensiveRadarDataJS = <?= json_encode($offensiveRadarData ?? null) ?>;
     const defensiveRadarDataJS = <?= json_encode($defensiveRadarData ?? null) ?>;
+    const historicalRankDataJS = <?= json_encode($historicalRankData ?? null) ?>;
 
     const chartTextColor = '#D1D5DB'; // gray-300
     const chartGridColor = 'rgba(255, 255, 255, 0.1)'; 
@@ -532,70 +566,66 @@ if ($team_season_filter_value_from_dashboard) {
     createRadarChart('offensiveRadarChart', offensiveRadarDataJS, 'Statistik Ofensif Tim vs Liga');
     createRadarChart('defensiveRadarChart', defensiveRadarDataJS, 'Statistik Defensif Tim vs Liga');
 
-    if (comparisonChartDataJS && document.getElementById('teamComparisonChart') && comparisonChartDataJS.datasets && comparisonChartDataJS.datasets.length > 0) {
-        const ctxComparison = document.getElementById('teamComparisonChart').getContext('2d');
-        new Chart(ctxComparison, {
-            type: 'bar',
-            data: comparisonChartDataJS,
+    // --- BARU: Logika untuk membuat Line Chart Peringkat ---
+    if (historicalRankDataJS && document.getElementById('historicalRankChart')) {
+        const ctxRank = document.getElementById('historicalRankChart').getContext('2d');
+        new Chart(ctxRank, {
+            type: 'line',
+            data: historicalRankDataJS,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y',
                 plugins: {
-                    legend: { 
-                        position: 'top', 
-                        labels: { 
-                            font: { size: 11 }, 
-                            padding:15, 
-                            usePointStyle: true, 
-                            boxWidth:10,
-                            color: chartTextColor 
-                        }
-                    },
-                    title: { 
-                        display: false, 
+                    legend: {
+                        display: false 
                     },
                     tooltip: {
                         backgroundColor: '#1F2937', 
                         titleColor: '#E5E7EB',
-                        bodyColor: '#D1D5DB', 
+                        bodyColor: '#D1D5DB',
                         borderColor: '#374151',
                         borderWidth: 1, padding: 10, cornerRadius: 6,
                         callbacks: {
+                            title: function(tooltipItems) {
+                                return 'Musim: ' + tooltipItems[0].label;
+                            },
                             label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) { label += ': '; }
-                                let value = context.raw;
-                                const statLabel = context.label;
-                                if (statLabel === 'Turnovers (Lower Better)' || statLabel === 'Points Allowed (Lower Better)') {
-                                    value = Math.abs(value);
-                                }
-                                label += parseFloat(value).toFixed(1);
-                                return label;
+                                return 'Peringkat Divisi: ' + context.parsed.y;
                             }
                         }
                     }
                 },
                 scales: {
-                    x: {
-                        title: { display: true, text: 'Nilai Statistik', font:{size:12, weight:'500'}, color: chartTextColor },
-                         ticks: {
-                            callback: function(value) { return Math.abs(value); },
-                            font:{size:10},
-                            color: chartTextColor
-                        },
-                        grid: { color: chartGridColor }
-                    },
                     y: {
-                        ticks: { font: { size: 10 }, color: chartTextColor },
-                        grid: { display: false }
+                        title: {
+                            display: true,
+                            text: 'Peringkat (Lebih Rendah Lebih Baik)',
+                            color: chartTextColor,
+                            font: { size: 12 }
+                        },
+                        reverse: true,
+                        min: 1,
+                        grid: { color: chartGridColor },
+                        ticks: {
+                            color: chartTextColor,
+                            callback: function(value) { if (Number.isInteger(value)) { return value; } }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Musim',
+                            color: chartTextColor,
+                            font: { size: 12 }
+                        },
+                        grid: { display: false },
+                        ticks: { color: chartTextColor }
                     }
                 }
             }
         });
-    } else if (document.getElementById('teamComparisonChart')) {
-        document.getElementById('teamComparisonChart').parentNode.innerHTML = '<p class="text-center text-sm text-gray-400 py-8 bg-gray-800 rounded">Tidak ada data yang cukup untuk menampilkan chart perbandingan umum.</p>';
     }
+
 </script>
 </body>
 </html>

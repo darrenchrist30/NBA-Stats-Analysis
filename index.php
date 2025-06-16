@@ -58,9 +58,10 @@ include 'header.php';
             left: 50%;
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Ini kunci agar video menutupi area tanpa distorsi */
+            object-fit: cover; 
+            object-position: center 35%;
             transform: translate(-50%, -50%);
-            z-index: 0; /* Pastikan video berada di paling belakang */
+            z-index: 0; 
         }
 
         .hero-section-static::before {

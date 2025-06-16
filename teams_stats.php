@@ -265,7 +265,10 @@ function calculateWinPercentage($won, $lost, $games = null)
                         </button>
                         <div class="dropdown-checklist-items hidden">
                             <?php foreach ($availableSeasons as $startYear): ?>
-                                <label><input type="checkbox" name="team_seasons[]" value="<?= $startYear ?>" <?= in_array($startYear, $filterTeamSeasons) ? 'checked' : '' ?>> Season <?= (int)$startYear + 1 ?></label>
+                                <label>
+                                    <input type="checkbox" name="team_seasons[]" value="<?= $startYear ?>" ... > 
+                                    Season <?= htmlspecialchars($startYear) ?> 
+                                </label>
                             <?php endforeach; ?>
                         </div>
                     </div>
@@ -369,14 +372,14 @@ function calculateWinPercentage($won, $lost, $games = null)
                                 }
                             ?>
                                 <tr class="hover:bg-gray-800/60 transition-colors duration-100 group">
-                                    <td class="px-4 py-2.5 text-gray-300 whitespace-nowrap text-center"><?= ($team['year'] ?? '') ? htmlspecialchars((int)$team['year'] + 1) : '-' ?></td>
+                                    <td class="px-4 py-2.5 text-gray-300 whitespace-nowrap text-center"><?= htmlspecialchars($team['year'] ?? '-') ?> </td>
                                     <td class="px-4 py-2.5 font-medium text-gray-200 whitespace-nowrap truncate group-hover:text-blue-400"><a href="team_detail.php?year=<?= htmlspecialchars($team['year'] ?? '') ?>&tmID=<?= urlencode($team['tmID'] ?? '') ?>" class="hover:underline"><?= htmlspecialchars($team['name'] ?? $team['tmID'] ?? 'N/A') ?></a></td>
                                     <td class="px-4 py-2.5 text-green-400 font-semibold text-center whitespace-nowrap"><?= htmlspecialchars($team['won'] ?? '0') ?></td>
                                     <td class="px-4 py-2.5 text-red-400 font-semibold text-center whitespace-nowrap"><?= htmlspecialchars($team['lost'] ?? '0') ?></td>
                                     <td class="px-4 py-2.5 text-blue-400 font-bold text-center whitespace-nowrap"><?= $winPct ?>%</td>
                                     <td class="px-4 py-2.5 text-gray-300 text-center whitespace-nowrap"><?= htmlspecialchars($team['homeWon'] ?? '0') ?>-<?= htmlspecialchars($team['homeLost'] ?? '0') ?></td>
                                     <td class="px-4 py-2.5 text-gray-300 text-center whitespace-nowrap"><?= htmlspecialchars($team['awayWon'] ?? '0') ?>-<?= htmlspecialchars($team['awayLost'] ?? '0') ?></td>
-                                    <td class="px-4 py-2.5 text-gray-300 text-center whitespace-nowrap"><?= htmlspecialchars($team['rank'] ?? '-') ?> <?php $confID = strtoupper($team['confID'] ?? '');
+                                    <td class="px-4 py-2.5 text-gray-300 text-center whitespace-nowrap"><?= htmlspecialchars($team['confRank'] ?? '-') ?> <?php $confID = strtoupper($team['confID'] ?? '');
                                                                                                                                                         if ($confID === 'WC') echo '<span class="badge badge-blue">WC</span>';
                                                                                                                                                         elseif ($confID === 'EC') echo '<span class="badge badge-red">EC</span>'; ?></td>
                                     <td class="px-4 py-2.5 text-center whitespace-nowrap"><span class="badge <?= $playoffBadge ?>"><?= htmlspecialchars($playoffStatus) ?></span></td>
@@ -404,7 +407,7 @@ function calculateWinPercentage($won, $lost, $games = null)
                 <h2 class="text-2xl font-semibold text-gray-200 text-center font-teko uppercase tracking-wider">Visual Insights</h2>
             </div>
             <div class="grid grid-cols-1 gap-6"><?php if (count($teamsData) > 0 && !empty($filterTeamSeasons) && count($filterTeamSeasons) == 1): ?><div class="content-container min-h-[400px] md:min-h-[450px]">
-                        <h3 class="text-base font-semibold mb-4 text-gray-300 font-rajdhani">Top 20 Team Win % (Season <?= htmlspecialchars((int)$filterTeamSeasons[0] + 1) ?>)</h3><canvas id="teamWinPercentageChart"></canvas>
+                        <h3 class="text-base font-semibold mb-4 text-gray-300 font-rajdhani">Top 20 Team Win % (Season <?= htmlspecialchars($filterTeamSeasons[0]) ?>)</h3><canvas id="teamWinPercentageChart"></canvas>
                     </div><?php elseif (count($teamsData) > 0 && (empty($filterTeamSeasons) || count($filterTeamSeasons) > 1)): ?><div class="text-center my-10 p-4 bg-blue-900/30 border border-blue-500/30 rounded-md">
                         <p class="text-sm text-blue-300">Please select a single season from the filter to display performance charts.</p>
                     </div><?php endif; ?></div>
