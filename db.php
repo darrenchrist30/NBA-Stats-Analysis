@@ -12,7 +12,7 @@ try {
 
     $players_collection = $db->players_collection; // Untuk data pemain jika diperlukan (mis. nama pelatih)
     $coaches_collection = $db->coaches_collection; // Sumber utama untuk statistik tim tahunan dan playoff
-    $teams_collection = $db->teams;
+    // $teams_collection = $db->teams;
 } catch (MongoDB\Driver\Exception\ConnectionTimeoutException $e) { /* ... error handling ... */
     die("...");
 } catch (MongoDB\Driver\Exception\AuthenticationException $e) { /* ... error handling ... */
