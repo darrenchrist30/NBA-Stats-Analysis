@@ -6,8 +6,8 @@ $databaseName = "nba_projek";
 
 try {
     // $client = new MongoDB\Client();
-    // $client = new MongoDB\Client("mongodb://mongo:mongo@localhost:27017");
-    $client = new MongoDB\Client();
+    $client = new MongoDB\Client("mongodb://mongo:mongo@localhost:27017");
+    // $client = new MongoDB\Client();
     $db = $client->selectDatabase($databaseName);
 
     $players_collection = $db->players_collection; // Untuk data pemain jika diperlukan (mis. nama pelatih)

@@ -191,7 +191,7 @@ if (isset($playerSeasonDetail['tmID'])) {
                 <?= htmlspecialchars($playerName) ?>
             </h1>
             <p class="text-xl md:text-2xl text-indigo-400 font-rajdhani">
-                Statistik Musim <?= htmlspecialchars($year_param_int + 1) ?>
+                Statistik Musim <?= htmlspecialchars($year_param_int) ?>
             </p>
         </header>
 

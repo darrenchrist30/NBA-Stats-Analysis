@@ -16,49 +16,103 @@ $max_start_year_allowed = 2023; // Sesuaikan jika perlu
 $availableSeasons = array_filter($availableSeasons, fn($year) => $year <= $max_start_year_allowed);
 rsort($availableSeasons);
 
-// --- BANGUN PIPELINE AGREGRASI UTAMA ---
-$mainPipeline = [];
-$mainPipeline[] = ['$unwind' => '$teams'];
-$mainPipeline[] = ['$match' => ['teams.team_season_details' => ['$ne' => null, '$exists' => true]]];
-$mainPipeline[] = ['$replaceRoot' => ['newRoot' => '$teams.team_season_details']];
+// --- BANGUN PIPELINE, HITUNG TOTAL, DAN PAGINASI (KODE LENGKAP PENGGANTI) ---
 
+// LANGKAH 1: Definisikan pipeline DASAR untuk memfilter dan membersihkan data
+$basePipeline = [];
+$basePipeline[] = ['$unwind' => '$teams'];
+$basePipeline[] = ['$unwind' => '$teams.team_season_details'];
+$basePipeline[] = ['$replaceRoot' => ['newRoot' => '$teams.team_season_details']];
+
+// LANGKAH 2: Bangun tahap filter berdasarkan input dari user (PERBAIKAN)
 $matchStage = [];
+
+// Filter berdasarkan musim (jika ada)
 if (!empty($filterTeamSeasons)) {
-    $matchStage['year'] = ['$in' => $filterTeamSeasons];
+    // Pastikan hanya menggunakan musim yang valid
+    $validFilterSeasons = array_filter($filterTeamSeasons, fn($year) => $year <= $max_start_year_allowed);
+    if (!empty($validFilterSeasons)) {
+        $matchStage['year'] = ['$in' => $validFilterSeasons];
+    }
 }
 
-// --- MODIFIKASI #2: QUERY DENGAN NAMA TIM (REGEX) ---
+// Filter berdasarkan NAMA Tim menggunakan Regex (jika ada)
+// Ambil nama-nama tim dari URL
+$filterTeamNames = isset($_GET['teams']) && is_array($_GET['teams']) ? array_map('strval', $_GET['teams']) : [];
+
 if (!empty($filterTeamNames)) {
     $orConditions = [];
     foreach ($filterTeamNames as $name) {
+        // Buat kondisi pencarian teks yang tidak case-sensitive
         $orConditions[] = ['name' => new MongoDB\BSON\Regex(preg_quote($name, '/'), 'i')];
     }
-    $matchStage['$or'] = $orConditions;
+    // Gabungkan dengan kondisi yang sudah ada (jika ada filter musim)
+    if (!empty($orConditions)) {
+        if (isset($matchStage['year'])) {
+            // Jika sudah ada filter tahun, gabungkan dengan AND
+            $matchStage['$and'] = [
+                ['year' => $matchStage['year']],
+                ['$or' => $orConditions]
+            ];
+            unset($matchStage['year']); // Hapus 'year' dari level atas
+        } else {
+            // Jika hanya ada filter nama
+            $matchStage['$or'] = $orConditions;
+        }
+    }
 }
 
+// Tambahkan tahap filter ke pipeline jika ada filter yang aktif
 if (!empty($matchStage)) {
-    $mainPipeline[] = ['$match' => $matchStage];
+    $basePipeline[] = ['$match' => $matchStage];
 }
 
-// --- MODIFIKASI #3: LOGIKA PAGINASI ---
-// Jalankan pipeline sekali untuk menghitung total entri
-$countPipeline = array_merge($mainPipeline, [['$count' => 'total']]);
-$countResult = $coaches_collection->aggregate($countPipeline)->toArray();
-$totalTeamEntries = $countResult[0]['total'] ?? 0;
+// LANGKAH 3: Tahap Anti-Duplikat untuk memastikan setiap tim per musim hanya muncul sekali
+$basePipeline[] = [
+    '$group' => [
+        '_id' => [ // Kunci unik adalah kombinasi tahun dan ID tim
+            'year' => '$year',
+            'tmID' => '$tmID'
+        ],
+        // Ambil dokumen lengkap dari entri pertama yang cocok
+        'doc' => ['$first' => '$$ROOT']
+    ]
+];
+$basePipeline[] = ['$replaceRoot' => ['newRoot' => '$doc']];
 
+
+// LANGKAH 4: Jalankan pipeline untuk MENGHITUNG TOTAL DATA sebelum paginasi
+// Ini akan mendefinisikan variabel $totalTeamEntries yang hilang dan memperbaiki error
+$countPipeline = array_merge($basePipeline, [['$count' => 'total']]);
+$countResult = $coaches_collection->aggregate($countPipeline)->toArray();
+$totalTeamEntries = $countResult[0]['total'] ?? 0; // <<< INI MEMPERBAIKI ERROR UNDEFINED VARIABLE
+
+
+// LANGKAH 5: Kembalikan logika PAGINASI yang sebelumnya hilang
 $validLimits = [10, 20, 50, 100];
+// Ambil limit dari URL atau gunakan nilai default 20
 $itemsPerPage = isset($_GET['limit']) && in_array((int)$_GET['limit'], $validLimits) ? (int)$_GET['limit'] : 20;
+// Ambil halaman dari URL atau gunakan halaman 1
 $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+// Hitung total halaman yang ada
 $totalPages = $totalTeamEntries > 0 ? ceil($totalTeamEntries / $itemsPerPage) : 1;
+// Pastikan halaman saat ini tidak kurang dari 1 atau lebih dari total halaman
 $currentPage = max(1, min($currentPage, $totalPages > 0 ? $totalPages : 1));
+// Hitung data yang harus dilewati (offset)
 $offset = ($currentPage - 1) * $itemsPerPage;
 
-// Tambahkan skip dan limit ke pipeline utama untuk mengambil data halaman saat ini
-$mainPipeline[] = ['$sort' => ['year' => -1, 'won' => -1, 'lost' => 1]];
-$mainPipeline[] = ['$skip' => $offset];
-$mainPipeline[] = ['$limit' => $itemsPerPage];
-$teamsData = $coaches_collection->aggregate($mainPipeline)->toArray();
 
+// LANGKAH 6: Bangun pipeline FINAL untuk mengambil data halaman saat ini
+$mainPipeline = $basePipeline; // Mulai dari pipeline dasar yang sudah kita buat
+// Tambahkan pengurutan
+$mainPipeline[] = ['$sort' => ['year' => -1, 'won' => -1, 'lost' => 1]];
+// Lewati data dari halaman-halaman sebelumnya
+$mainPipeline[] = ['$skip' => $offset];
+// Batasi data yang diambil hanya untuk halaman ini
+$mainPipeline[] = ['$limit' => $itemsPerPage];
+
+// Jalankan pipeline final untuk mendapatkan data yang akan ditampilkan di tabel
+$teamsData = $coaches_collection->aggregate($mainPipeline)->toArray();
 
 function calculateWinPercentage($won, $lost, $games = null)
 {
@@ -401,7 +455,7 @@ if (!empty($filterTeamNames) && count($filterTeamSeasons) > 1) {
                                     <td class="px-4 py-2.5 text-gray-300 text-center whitespace-nowrap"><?= htmlspecialchars($team['confRank'] ?? '0') ?> <?php if (($team['confID'] ?? '') === 'WC') echo '<span class="badge badge-blue">WC</span>';
                                                                                                                                                             elseif (($team['confID'] ?? '') === 'EC') echo '<span class="badge badge-red">EC</span>'; ?></td>
                                     <td class="px-4 py-2.5 text-center whitespace-nowrap"><span class="badge <?= $playoffBadge ?>"><?= htmlspecialchars($playoffStatus) ?></span></td>
-                                    <td class="px-4 py-2.5 text-center whitespace-nowrap"><a href="#" class="text-blue-400 hover:text-blue-300 text-xs font-semibold hover:underline">Detail <i class="fas fa-arrow-right fa-xs ml-0.5"></i></a></td>
+                                    <td class="px-4 py-2.5 text-center whitespace-nowrap"><a href="team_detail.php?year=<?= htmlspecialchars($team['year'] ?? '') ?>&tmID=<?= urlencode($team['tmID'] ?? '') ?>" class="text-blue-400 hover:text-blue-300 text-xs font-semibold hover:underline">Detail <i class="fas fa-arrow-right fa-xs ml-0.5"></i></a></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
