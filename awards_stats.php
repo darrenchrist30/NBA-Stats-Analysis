@@ -107,7 +107,6 @@ if (!empty($awardsData)) {
         $totalAwardsSql = "SELECT recipient_id, COUNT(*) as total FROM awards WHERE recipient_id IN ($placeholders) GROUP BY recipient_id";
         $totalStmt = $pdo->prepare($totalAwardsSql);
 
-        // --- FIX: Gunakan array_values() untuk memastikan kunci array sekuensial ---
         $totalStmt->execute(array_values($allRecipientIds));
 
         $totals = $totalStmt->fetchAll(PDO::FETCH_KEY_PAIR);

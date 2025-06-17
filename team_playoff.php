@@ -68,7 +68,6 @@ if (!$teamDetail) {
     die("Detail tim tidak ditemukan untuk ".htmlspecialchars($tmID_param)." pada musim ".htmlspecialchars($display_season_year).".");
 }
 
-// --- [QUERY BLOK 2: "TAMBALAN" HASIL PLAYOFF] ---
 $correctPlayoffResult = '-'; // Nilai default
 try {
     $year_for_correct_playoff = $season_start_year_for_db + 1;
@@ -100,8 +99,6 @@ try {
     $correctPlayoffResult = '-';
 }
 
-
-// --- [QUERY BLOK 3: DATA HISTORIS UNTUK GRAFIK] ---
 $historicalPlayoffData = [];
 try {
     $pipelineHistorical = [

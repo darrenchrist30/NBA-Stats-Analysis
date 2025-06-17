@@ -103,11 +103,9 @@ foreach ($barChartDataResult as $doc) {
     ];
 }
 
-// RADAR CHART BENCHMARK
 $maxStatsPerSeason = [];
 $radarEnabled = count($filterSeasons) === 1;
 if ($radarEnabled) {
-    // ... Logika benchmark tidak berubah ...
     $seasonForBenchmark = $filterSeasons[0];
     $benchmarkPipeline = [['$unwind' => '$career_teams'], ['$match' => ['career_teams.year' => $seasonForBenchmark, 'career_teams.GP' => ['$gt' => 10]]], ['$addFields' => ['ppg' => ['$cond' => [['$gt' => ['$career_teams.GP', 0]], ['$divide' => ['$career_teams.points', '$career_teams.GP']], 0]], 'rpg' => ['$cond' => [['$gt' => ['$career_teams.GP', 0]], ['$divide' => ['$career_teams.rebounds', '$career_teams.GP']], 0]], 'apg' => ['$cond' => [['$gt' => ['$career_teams.GP', 0]], ['$divide' => ['$career_teams.assists', '$career_teams.GP']], 0]], 'spg' => ['$cond' => [['$gt' => ['$career_teams.GP', 0]], ['$divide' => ['$career_teams.steals', '$career_teams.GP']], 0]], 'bpg' => ['$cond' => [['$gt' => ['$career_teams.GP', 0]], ['$divide' => ['$career_teams.blocks', '$career_teams.GP']], 0]],]], ['$group' => ['_id' => null, 'max_points' => ['$max' => '$ppg'], 'max_rebounds' => ['$max' => '$rpg'], 'max_assists' => ['$max' => '$apg'], 'max_steals' => ['$max' => '$spg'], 'max_blocks' => ['$max' => '$bpg'],]]];
     $maxStatsResult = $players_collection->aggregate($benchmarkPipeline)->toArray();

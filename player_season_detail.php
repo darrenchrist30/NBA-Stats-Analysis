@@ -24,7 +24,7 @@ $pipeline = [
         ]
     ],
     [
-        '$unwind' => '$career_teams' // Bongkar array career_teams
+        '$unwind' => '$career_teams' 
     ],
     [
         '$match' => [
@@ -100,7 +100,7 @@ if ($playerSeasonDetail && isset($playerSeasonDetail['GP']) && $playerSeasonDeta
 // Ambil nama tim
 $teamNameForDisplay = $team_param;
 if (isset($playerSeasonDetail['tmID'])) {
-    $teamDoc = $teams_collection->findOne(['tmID' => $playerSeasonDetail['tmID']], ['projection' => ['name' => 1]]);
+    $teamDoc = $coaches_collection->findOne(['tmID' => $playerSeasonDetail['tmID']], ['projection' => ['name' => 1]]);
     if ($teamDoc && isset($teamDoc['name'])) {
         $teamNameForDisplay = $teamDoc['name'];
     }
